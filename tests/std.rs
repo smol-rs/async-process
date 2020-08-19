@@ -95,6 +95,7 @@ fn stdout_works() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)]
 fn set_current_dir_works() {
     future::block_on(async {
         let mut cmd = Command::new("/bin/sh");
@@ -107,6 +108,7 @@ fn set_current_dir_works() {
 }
 
 #[test]
+#[cfg_attr(windows, ignore)]
 fn stdin_works() {
     future::block_on(async {
         let mut p = Command::new("/bin/sh")
