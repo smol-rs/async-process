@@ -1,3 +1,5 @@
+//! These tests are borrowed from the `std::process` test suite.
+
 use std::env;
 use std::str;
 
