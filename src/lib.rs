@@ -48,7 +48,6 @@
 //! # std::io::Result::Ok(()) });
 //! ```
 
-#![cfg_attr(unix, forbid(unsafe_code))]
 #![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 
 use std::ffi::OsStr;
@@ -70,6 +69,11 @@ use once_cell::sync::Lazy;
 
 #[doc(no_inline)]
 pub use std::process::{ExitStatus, Output, Stdio};
+
+#[cfg(unix)]
+pub mod unix;
+#[cfg(windows)]
+pub mod windows;
 
 /// An event delivered every time the SIGCHLD signal occurs.
 static SIGCHLD: Event = Event::new();
