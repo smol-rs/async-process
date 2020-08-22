@@ -75,11 +75,14 @@ pub use std::process::{ExitStatus, Output, Stdio};
 static SIGCHLD: Event = Event::new();
 
 /// A guard that pushes abandoned child processes into the zombie list.
-struct ChildGuard(Option<std::process::Child>);
+struct ChildGuard {
+    inner: Option<std::process::Child>,
+    reap_on_drop: bool,
+}
 
 impl ChildGuard {
     fn get_mut(&mut self) -> &mut std::process::Child {
-        self.0.as_mut().unwrap()
+        self.inner.as_mut().unwrap()
     }
 }
 
@@ -113,6 +116,9 @@ pub struct Child {
 
     /// The inner child process handle.
     child: Arc<Mutex<ChildGuard>>,
+
+    /// Whether to kill the process on drop.
+    kill_on_drop: bool,
 }
 
 impl Child {
@@ -120,7 +126,14 @@ impl Child {
     ///
     /// The "async-process" thread waits for processes in the global list and cleans up the
     /// resources when they exit.
-    fn new(mut child: std::process::Child) -> io::Result<Child> {
+    fn new(cmd: &mut Command) -> io::Result<Child> {
+        let mut child = cmd.inner.spawn()?;
+
+        // Convert sync I/O types into async I/O types.
+        let stdin = child.stdin.take().map(wrap).transpose()?.map(ChildStdin);
+        let stdout = child.stdout.take().map(wrap).transpose()?.map(ChildStdout);
+        let stderr = child.stderr.take().map(wrap).transpose()?.map(ChildStderr);
+
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
                 use std::os::windows::io::AsRawHandle;
@@ -225,23 +238,24 @@ impl Child {
         // When the last reference to the child process is dropped, push it into the zombie list.
         impl Drop for ChildGuard {
             fn drop(&mut self) {
-                let mut zombies = ZOMBIES.lock().unwrap();
-                if let Ok(None) = self.get_mut().try_wait() {
-                    zombies.push(self.0.take().unwrap());
+                if self.reap_on_drop {
+                    let mut zombies = ZOMBIES.lock().unwrap();
+                    if let Ok(None) = self.get_mut().try_wait() {
+                        zombies.push(self.inner.take().unwrap());
+                    }
                 }
             }
         }
-
-        // Convert sync I/O types into async I/O types.
-        let stdin = child.stdin.take().map(wrap).transpose()?.map(ChildStdin);
-        let stdout = child.stdout.take().map(wrap).transpose()?.map(ChildStdout);
-        let stderr = child.stderr.take().map(wrap).transpose()?.map(ChildStderr);
 
         Ok(Child {
             stdin,
             stdout,
             stderr,
-            child: Arc::new(Mutex::new(ChildGuard(Some(child)))),
+            child: Arc::new(Mutex::new(ChildGuard {
+                inner: Some(child),
+                reap_on_drop: cmd.reap_on_drop,
+            })),
+            kill_on_drop: cmd.kill_on_drop,
         })
     }
 
@@ -403,6 +417,14 @@ impl Child {
     }
 }
 
+impl Drop for Child {
+    fn drop(&mut self) {
+        if self.kill_on_drop {
+            let _ = self.kill();
+        }
+    }
+}
+
 impl fmt::Debug for Child {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Child")
@@ -496,10 +518,12 @@ impl io::AsyncRead for ChildStderr {
 /// ```
 #[derive(Debug)]
 pub struct Command {
-    cmd: std::process::Command,
+    inner: std::process::Command,
     stdin: Option<Stdio>,
     stdout: Option<Stdio>,
     stderr: Option<Stdio>,
+    reap_on_drop: bool,
+    kill_on_drop: bool,
 }
 
 impl Command {
@@ -517,10 +541,12 @@ impl Command {
     /// ```
     pub fn new<S: AsRef<OsStr>>(program: S) -> Command {
         Command {
-            cmd: std::process::Command::new(program),
+            inner: std::process::Command::new(program),
             stdin: None,
             stdout: None,
             stderr: None,
+            reap_on_drop: true,
+            kill_on_drop: false,
         }
     }
 
@@ -536,7 +562,7 @@ impl Command {
     /// cmd.arg("world");
     /// ```
     pub fn arg<S: AsRef<OsStr>>(&mut self, arg: S) -> &mut Command {
-        self.cmd.arg(arg);
+        self.inner.arg(arg);
         self
     }
 
@@ -555,7 +581,7 @@ impl Command {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        self.cmd.args(args);
+        self.inner.args(args);
         self
     }
 
@@ -577,7 +603,7 @@ impl Command {
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
-        self.cmd.env(key, val);
+        self.inner.env(key, val);
         self
     }
 
@@ -600,7 +626,7 @@ impl Command {
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
-        self.cmd.envs(vars);
+        self.inner.envs(vars);
         self
     }
 
@@ -615,7 +641,7 @@ impl Command {
     /// cmd.env_remove("PATH");
     /// ```
     pub fn env_remove<K: AsRef<OsStr>>(&mut self, key: K) -> &mut Command {
-        self.cmd.env_remove(key);
+        self.inner.env_remove(key);
         self
     }
 
@@ -630,7 +656,7 @@ impl Command {
     /// cmd.env_clear();
     /// ```
     pub fn env_clear(&mut self) -> &mut Command {
-        self.cmd.env_clear();
+        self.inner.env_clear();
         self
     }
 
@@ -645,7 +671,7 @@ impl Command {
     /// cmd.current_dir("/");
     /// ```
     pub fn current_dir<P: AsRef<Path>>(&mut self, dir: P) -> &mut Command {
-        self.cmd.current_dir(dir);
+        self.inner.current_dir(dir);
         self
     }
 
@@ -694,6 +720,48 @@ impl Command {
         self
     }
 
+    /// Configures whether to reap the zombie process when [`Child`] is dropped.
+    ///
+    /// When the process finishes, it becomes a "zombie" and some resources associated with it
+    /// remain until [`Child::try_status()`], [`Child::status()`], or [`Child::output()`] collects
+    /// its exit code.
+    ///
+    /// If its exit code is never collected, the resources may leak forever. This crate has a
+    /// background thread named "async-process" that collects such "zombie" processes and then
+    /// "reaps" them, thus preventing the resource leaks.
+    ///
+    /// The default value of this option is `true`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use async_process::{Command, Stdio};
+    ///
+    /// let mut cmd = Command::new("cat");
+    /// cmd.reap_on_drop(false);
+    /// ```
+    pub fn reap_on_drop(&mut self, reap_on_drop: bool) -> &mut Command {
+        self.reap_on_drop = reap_on_drop;
+        self
+    }
+
+    /// Configures whether to kill the process when [`Child`] is dropped.
+    ///
+    /// The default value of this option is `false`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use async_process::{Command, Stdio};
+    ///
+    /// let mut cmd = Command::new("cat");
+    /// cmd.kill_on_drop(true);
+    /// ```
+    pub fn kill_on_drop(&mut self, kill_on_drop: bool) -> &mut Command {
+        self.kill_on_drop = kill_on_drop;
+        self
+    }
+
     /// Executes the command and returns the [`Child`] handle to it.
     ///
     /// If not configured, stdin, stdout and stderr will be set to [`Stdio::inherit()`].
@@ -711,11 +779,11 @@ impl Command {
     /// ```
     pub fn spawn(&mut self) -> io::Result<Child> {
         let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.cmd.stdin(stdin.unwrap_or(Stdio::inherit()));
-        self.cmd.stdout(stdout.unwrap_or(Stdio::inherit()));
-        self.cmd.stderr(stderr.unwrap_or(Stdio::inherit()));
+        self.inner.stdin(stdin.unwrap_or(Stdio::inherit()));
+        self.inner.stdout(stdout.unwrap_or(Stdio::inherit()));
+        self.inner.stderr(stderr.unwrap_or(Stdio::inherit()));
 
-        Child::new(self.cmd.spawn()?)
+        Child::new(self)
     }
 
     /// Executes the command, waits for it to exit, and returns the exit status.
@@ -760,11 +828,11 @@ impl Command {
     /// ```
     pub fn output(&mut self) -> impl Future<Output = io::Result<Output>> {
         let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.cmd.stdin(stdin.unwrap_or(Stdio::null()));
-        self.cmd.stdout(stdout.unwrap_or(Stdio::piped()));
-        self.cmd.stderr(stderr.unwrap_or(Stdio::piped()));
+        self.inner.stdin(stdin.unwrap_or(Stdio::null()));
+        self.inner.stdout(stdout.unwrap_or(Stdio::piped()));
+        self.inner.stderr(stderr.unwrap_or(Stdio::piped()));
 
-        let child = self.cmd.spawn();
-        async { Child::new(child?)?.output().await }
+        let child = Child::new(self);
+        async { child?.output().await }
     }
 }
