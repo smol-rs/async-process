@@ -1,3 +1,7 @@
+# Version 0.1.3
+
+- Update dependencies.
+
 # Version 0.1.2
 
 - Add Unix and Windows extensions.

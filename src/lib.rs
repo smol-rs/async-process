@@ -410,7 +410,7 @@ impl Child {
         };
 
         async move {
-            let (stdout, stderr) = future::try_join(stdout, stderr).await?;
+            let (stdout, stderr) = future::try_zip(stdout, stderr).await?;
             let status = status.await?;
             Ok(Output {
                 status,
