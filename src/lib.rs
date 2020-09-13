@@ -157,7 +157,7 @@ impl Child {
 
                 // Called when a child exits.
                 unsafe extern "system" fn callback(_: PVOID, _: BOOLEAN) {
-                    let _ = CALLBACK.0.try_send(());
+                    CALLBACK.0.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
@@ -178,7 +178,7 @@ impl Child {
 
                 // Waits for the next SIGCHLD signal.
                 fn wait_sigchld() {
-                    let _ = CALLBACK.1.lock().unwrap().recv();
+                    CALLBACK.1.lock().unwrap().recv().ok();
                 }
 
                 // Wraps a sync I/O type into an async I/O type.
@@ -424,7 +424,7 @@ impl Child {
 impl Drop for Child {
     fn drop(&mut self) {
         if self.kill_on_drop {
-            let _ = self.kill();
+            self.kill().ok();
         }
     }
 }
