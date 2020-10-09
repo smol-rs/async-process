@@ -1,3 +1,7 @@
+# Version 1.0.1
+
+- Update `futures-lite`.
+
 # Version 1.0.0
 
 - Update dependencies and stabilize.
