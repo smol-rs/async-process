@@ -1,10 +1,11 @@
 //! These tests are borrowed from the `std::process` test suite.
 
 use std::env;
+use std::io;
 use std::str;
 
 use async_process::{Command, Output, Stdio};
-use futures_lite::*;
+use futures_lite::{future, prelude::*};
 
 #[test]
 fn smoke() {

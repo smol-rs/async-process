@@ -33,7 +33,7 @@
 //! ```no_run
 //! # futures_lite::future::block_on(async {
 //! use async_process::{Command, Stdio};
-//! use futures_lite::{AsyncBufReadExt, StreamExt, io::BufReader};
+//! use futures_lite::{io::BufReader, prelude::*};
 //!
 //! let mut child = Command::new("find")
 //!     .arg(".")
@@ -52,7 +52,6 @@
 
 use std::ffi::OsStr;
 use std::fmt;
-use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
@@ -64,7 +63,7 @@ use async_io::Async;
 #[cfg(windows)]
 use blocking::Unblock;
 use event_listener::Event;
-use futures_lite::{future, io, AsyncReadExt};
+use futures_lite::{future, io, prelude::*};
 use once_cell::sync::Lazy;
 
 #[doc(no_inline)]

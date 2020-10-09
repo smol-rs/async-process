@@ -41,7 +41,7 @@ Read the output line-by-line as it gets produced:
 
 ```rust
 use async_process::{Command, Stdio};
-use futures_lite::{AsyncBufReadExt, StreamExt, io::BufReader};
+use futures_lite::{io::BufReader, prelude::*};
 
 let mut child = Command::new("find")
     .arg(".")
