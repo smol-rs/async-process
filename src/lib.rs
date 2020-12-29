@@ -186,9 +186,11 @@ impl Child {
                 }
 
             } else if #[cfg(unix)] {
-                static SIGNALS: Lazy<signal_hook::iterator::Signals> = Lazy::new(|| {
-                    signal_hook::iterator::Signals::new(&[signal_hook::SIGCHLD])
-                        .expect("cannot set signal handler for SIGCHLD")
+                static SIGNALS: Lazy<Mutex<signal_hook::iterator::Signals>> = Lazy::new(|| {
+                    Mutex::new(
+                        signal_hook::iterator::Signals::new(&[signal_hook::consts::SIGCHLD])
+                            .expect("cannot set signal handler for SIGCHLD"),
+                    )
                 });
 
                 // Make sure the signal handler is registered before interacting with the process.
@@ -196,7 +198,7 @@ impl Child {
 
                 // Waits for the next SIGCHLD signal.
                 fn wait_sigchld() {
-                    SIGNALS.forever().next();
+                    SIGNALS.lock().unwrap().forever().next();
                 }
 
                 // Wraps a sync I/O type into an async I/O type.

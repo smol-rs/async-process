@@ -20,7 +20,11 @@ once_cell = "1.4.1"
 
 [target.'cfg(unix)'.dependencies]
 async-io = "1.0.0"
-signal-hook = { version = "0.1.16", default-features = false }
+
+[target.'cfg(unix)'.dependencies.signal-hook]
+version = "0.3.0"
+features = ["iterator"]
+default-features = false
 
 [target.'cfg(windows)'.dependencies]
 blocking = "1.0.0"
