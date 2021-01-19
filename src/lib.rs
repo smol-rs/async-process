@@ -828,7 +828,10 @@ impl Command {
     /// # futures_lite::future::block_on(async {
     /// use async_process::Command;
     ///
-    /// let child = Command::new("ls").spawn()?;
+    /// let output = Command::new("cat")
+    ///     .arg("a.txt")
+    ///     .output()
+    ///     .await?;
     /// # std::io::Result::Ok(()) });
     /// ```
     pub fn output(&mut self) -> impl Future<Output = io::Result<Output>> {
