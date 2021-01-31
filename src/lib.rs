@@ -77,10 +77,11 @@ pub mod windows;
 /// An event delivered every time the SIGCHLD signal occurs.
 static SIGCHLD: Event = Event::new();
 
-/// A guard that pushes abandoned child processes into the zombie list.
+/// A guard that can kill child processes, or push them into the zombie list.
 struct ChildGuard {
     inner: Option<std::process::Child>,
     reap_on_drop: bool,
+    kill_on_drop: bool,
 }
 
 impl ChildGuard {
@@ -119,9 +120,6 @@ pub struct Child {
 
     /// The inner child process handle.
     child: Arc<Mutex<ChildGuard>>,
-
-    /// Whether to kill the process on drop.
-    kill_on_drop: bool,
 }
 
 impl Child {
@@ -243,6 +241,9 @@ impl Child {
         // When the last reference to the child process is dropped, push it into the zombie list.
         impl Drop for ChildGuard {
             fn drop(&mut self) {
+                if self.kill_on_drop {
+                    self.get_mut().kill().ok();
+                }
                 if self.reap_on_drop {
                     let mut zombies = ZOMBIES.lock().unwrap();
                     if let Ok(None) = self.get_mut().try_wait() {
@@ -259,8 +260,8 @@ impl Child {
             child: Arc::new(Mutex::new(ChildGuard {
                 inner: Some(child),
                 reap_on_drop: cmd.reap_on_drop,
+                kill_on_drop: cmd.kill_on_drop,
             })),
-            kill_on_drop: cmd.kill_on_drop,
         })
     }
 
@@ -418,14 +419,6 @@ impl Child {
                 stdout,
                 stderr,
             })
-        }
-    }
-}
-
-impl Drop for Child {
-    fn drop(&mut self) {
-        if self.kill_on_drop {
-            self.kill().ok();
         }
     }
 }

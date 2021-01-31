@@ -366,3 +366,18 @@ fn test_capture_env_at_spawn() {
         );
     })
 }
+
+#[test]
+#[cfg(unix)]
+fn child_status_preserved_with_kill_on_drop() {
+    future::block_on(async {
+        let p = Command::new("true").kill_on_drop(true).spawn().unwrap();
+
+        // Calling output, since it takes ownership of the child
+        // Child::status would work, but without special care,
+        // dropping p inside of output would kill the subprocess early,
+        // and report the wrong exit status
+        let res = p.output().await;
+        assert!(res.unwrap().status.success());
+    })
+}
