@@ -1,6 +1,6 @@
 [package]
 name = "async-process"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 edition = "2018"
 description = "Async interface for working with processes"

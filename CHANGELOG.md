@@ -1,3 +1,7 @@
+# Version 1.0.2
+
+- Use `kill_on_drop` only when the last reference to `ChildGuard` is dropped.
+
 # Version 1.0.1
 
 - Update `futures-lite`.
