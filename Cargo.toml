@@ -10,7 +10,6 @@ homepage = "https://github.com/smol-rs/async-process"
 documentation = "https://docs.rs/async-process"
 keywords = ["process", "spawn", "command", "subprocess", "child"]
 categories = ["asynchronous", "os"]
-readme = "README.md"
 
 [dependencies]
 cfg-if = "1.0"
