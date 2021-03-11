@@ -443,6 +443,36 @@ pub struct ChildStdin(
     #[cfg(unix)] Async<std::process::ChildStdin>,
 );
 
+impl ChildStdin {
+    /// Unwraps the inner I/O handle.
+    ///
+    /// This method will **not** put the I/O handle back into blocking mode.
+    /// You can use it to associate to the next process.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # futures_lite::future::block_on(async {
+    /// use async_process::Command;
+    ///
+    /// let mut ls_child = Command::new("ls").spawn()?;
+    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    ///
+    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
+    ///
+    /// # std::io::Result::Ok(()) });
+    /// ```
+    pub async fn into_inner(self) -> io::Result<std::process::ChildStdin> {
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                self.0.into_inner().await
+            } else if #[cfg(unix)] {
+                self.0.into_inner()
+            }
+        }
+    }
+}
+
 impl io::AsyncWrite for ChildStdin {
     fn poll_write(
         mut self: Pin<&mut Self>,
@@ -470,6 +500,36 @@ pub struct ChildStdout(
     #[cfg(unix)] Async<std::process::ChildStdout>,
 );
 
+impl ChildStdout {
+    /// Unwraps the inner I/O handle.
+    ///
+    /// This method will **not** put the I/O handle back into blocking mode.
+    /// You can use it to associate to the next process.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # futures_lite::future::block_on(async {
+    /// use async_process::Command;
+    ///
+    /// let mut ls_child = Command::new("ls").spawn()?;
+    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    ///
+    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
+    ///
+    /// # std::io::Result::Ok(()) });
+    /// ```
+    pub async fn into_inner(self) -> io::Result<std::process::ChildStdout> {
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                self.0.into_inner().await
+            } else if #[cfg(unix)] {
+                self.0.into_inner()
+            }
+        }
+    }
+}
+
 impl io::AsyncRead for ChildStdout {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -488,6 +548,36 @@ pub struct ChildStderr(
     #[cfg(windows)] Unblock<std::process::ChildStderr>,
     #[cfg(unix)] Async<std::process::ChildStderr>,
 );
+
+impl ChildStderr {
+    /// Unwraps the inner I/O handle.
+    ///
+    /// This method will **not** put the I/O handle back into blocking mode.
+    /// You can use it to associate to the next process.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # futures_lite::future::block_on(async {
+    /// use async_process::Command;
+    ///
+    /// let mut ls_child = Command::new("ls").spawn()?;
+    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    ///
+    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
+    ///
+    /// # std::io::Result::Ok(()) });
+    /// ```
+    pub async fn into_inner(self) -> io::Result<std::process::ChildStderr> {
+        cfg_if::cfg_if! {
+            if #[cfg(windows)] {
+                self.0.into_inner().await
+            } else if #[cfg(unix)] {
+                self.0.into_inner()
+            }
+        }
+    }
+}
 
 impl io::AsyncRead for ChildStderr {
     fn poll_read(
