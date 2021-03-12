@@ -508,15 +508,18 @@ impl ChildStdout {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// # futures_lite::future::block_on(async {
     /// use async_process::Command;
+    /// use std::process::Stdio;
+    /// use std::io::Read;
     ///
-    /// let mut ls_child = Command::new("ls").spawn()?;
-    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    /// let mut ls_child = Command::new("ls").stdout(Stdio::piped()).spawn()?;
+    /// let stdio :Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
     ///
-    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
-    ///
+    /// let mut echo_child = Command::new("echo").stdin(stdio).stdout(Stdio::piped()).spawn()?;
+    /// let mut buf = vec![];
+    /// echo_child.stdout.take().unwrap().into_inner().await.unwrap().read(&mut buf);
     /// # std::io::Result::Ok(()) });
     /// ```
     pub async fn into_inner(self) -> io::Result<std::process::ChildStdout> {
@@ -925,5 +928,111 @@ impl Command {
 
         let child = Child::new(self);
         async { child?.output().await }
+    }
+}
+
+mod test {
+
+    // unix-like
+
+    //FIONBIO fionbio
+    //cvt(unsafe { libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking) }).map(drop)
+
+    // windows-like
+    //  let r = unsafe { c::ioctlsocket(self.0, c::FIONBIO as c_int, &mut nonblocking) };
+
+
+    //TODO: Thanks https://stackoverflow.com/questions/13554691/errno-11-resource-temporarily-unavailable.
+    // man read.
+    #[test]
+    fn test_into_inner() {
+        futures_lite::future::block_on(async {
+            use crate::Command;
+            use std::io::Read;
+            use std::process::Stdio;
+            use std::str::from_utf8;
+            use std::thread::sleep;
+            use std::time::Duration;
+
+            let mut ls_child = Command::new("cat")
+                .arg("Cargo.toml")
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            dbg!(1);
+            let stdio: Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+            dbg!(2);
+
+            let mut echo_child = Command::new("grep")
+                .arg("async")
+                .stdin(stdio)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            dbg!(3);
+
+            let mut buf = vec![];
+            // FIXME: read-to-end happend error. Need to repated call.
+            let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
+            dbg!(4);
+
+            for i in 0..1000 {
+                dbg!(i);
+                let x = stdout.read_to_end(&mut buf);
+
+                match x {
+                    Ok(size) if size > 0 => {
+                        dbg!(size);
+                        break;
+                    }
+                    Err(e) => {
+                        dbg!(e);
+                    }
+                    _ => {}
+                }
+
+                stdout.read(&mut buf)?;
+                sleep(Duration::from_micros(200));
+            }
+
+            dbg!(from_utf8(&buf));
+
+            std::io::Result::Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn test_into_inner1() {
+        futures_lite::future::block_on(async {
+            use std::io::Read;
+            use std::process::{Command, Stdio};
+            use std::str::from_utf8;
+
+            let mut ls_child = Command::new("cat")
+                .arg("Cargo.toml")
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            dbg!(1);
+            let stdio: Stdio = ls_child.stdout.take().unwrap().into();
+            dbg!(2);
+
+            let mut echo_child = Command::new("grep")
+                .arg("async")
+                .stdin(stdio)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            dbg!(3);
+
+            let mut buf = vec![];
+            let mut stdout = echo_child.stdout.take().unwrap();
+            dbg!(4);
+
+            stdout.read_to_end(&mut buf)?;
+            dbg!(from_utf8(&buf));
+
+            std::io::Result::Ok(())
+        })
+        .unwrap();
     }
 }
