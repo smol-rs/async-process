@@ -60,8 +60,14 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
+#[cfg(unix)]
+use libc::ioctl;
+
 #[cfg(windows)]
 use blocking::Unblock;
+#[cfg(windows)]
+use winapi::um::winsock2::ioctlsocket as ioctl;
+
 use event_listener::Event;
 use futures_lite::{future, io, prelude::*};
 use once_cell::sync::Lazy;
@@ -941,7 +947,6 @@ mod test {
     // windows-like
     //  let r = unsafe { c::ioctlsocket(self.0, c::FIONBIO as c_int, &mut nonblocking) };
 
-
     //TODO: Thanks https://stackoverflow.com/questions/13554691/errno-11-resource-temporarily-unavailable.
     // man read.
     #[test]
@@ -959,21 +964,17 @@ mod test {
                 .stdout(Stdio::piped())
                 .spawn()?;
 
-            dbg!(1);
             let stdio: Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
-            dbg!(2);
 
             let mut echo_child = Command::new("grep")
                 .arg("async")
                 .stdin(stdio)
                 .stdout(Stdio::piped())
                 .spawn()?;
-            dbg!(3);
 
             let mut buf = vec![];
             // FIXME: read-to-end happend error. Need to repated call.
             let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
-            dbg!(4);
 
             for i in 0..1000 {
                 dbg!(i);
@@ -1013,22 +1014,75 @@ mod test {
                 .stdout(Stdio::piped())
                 .spawn()?;
 
-            dbg!(1);
             let stdio: Stdio = ls_child.stdout.take().unwrap().into();
-            dbg!(2);
 
             let mut echo_child = Command::new("grep")
                 .arg("async")
                 .stdin(stdio)
                 .stdout(Stdio::piped())
                 .spawn()?;
-            dbg!(3);
 
             let mut buf = vec![];
             let mut stdout = echo_child.stdout.take().unwrap();
-            dbg!(4);
 
             stdout.read_to_end(&mut buf)?;
+            dbg!(from_utf8(&buf));
+
+            std::io::Result::Ok(())
+        })
+        .unwrap();
+    }
+
+    //ioctl
+    #[test]
+    fn test_into_inner_fixed() {
+        futures_lite::future::block_on(async {
+            use crate::Command;
+            use std::io::Read;
+            use std::process::Stdio;
+            use std::str::from_utf8;
+            use std::thread::sleep;
+            use std::time::Duration;
+
+            #[cfg(unix)]
+            use std::os::unix::io::AsRawFd;
+
+            #[cfg(unix)]
+            use libc::ioctl;
+
+            #[cfg(windows)]
+            use std::os::windows::io::AsRawSocket;
+
+            let mut ls_child = Command::new("cat")
+                .arg("Cargo.toml")
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            let stdio: Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+
+            let mut echo_child = Command::new("grep")
+                .arg("async")
+                .stdin(stdio)
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            let mut buf = vec![];
+            let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
+
+            unsafe {
+                ioctl(stdout.as_raw_fd(), libc::FIONBIO, &mut false);
+            }
+
+            //TODO: after set first read_to_end may be come back EWOULDBLOCK , should avoid.
+
+            let x = stdout.read(&mut buf)?;
+            let x = stdout.read(&mut buf)?;
+
+
+            let x = stdout.read_to_end(&mut buf);
+            let x = stdout.read_to_end(&mut buf);
+
+
             dbg!(from_utf8(&buf));
 
             std::io::Result::Ok(())

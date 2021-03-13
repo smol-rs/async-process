@@ -19,6 +19,7 @@ once_cell = "1.4.1"
 
 [target.'cfg(unix)'.dependencies]
 async-io = "1.0.0"
+libc = "0.2.88"
 
 [target.'cfg(unix)'.dependencies.signal-hook]
 version = "0.3.0"
@@ -34,4 +35,5 @@ default-features = false
 features = [
   "winbase",
   "winnt",
+  "winsock2"
 ]
