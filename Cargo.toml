@@ -1,6 +1,6 @@
 [package]
 name = "async-process"
-version = "1.0.2"
+version = "1.1.0"
 authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 edition = "2018"
 description = "Async interface for working with processes"
@@ -34,6 +34,5 @@ version = "0.3.9"
 default-features = false
 features = [
   "winbase",
-  "winnt",
-  "winsock2"
+  "winnt"
 ]

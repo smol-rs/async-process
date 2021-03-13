@@ -60,13 +60,9 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
-#[cfg(unix)]
-use libc::ioctl;
 
 #[cfg(windows)]
 use blocking::Unblock;
-#[cfg(windows)]
-use winapi::um::winsock2::ioctlsocket as ioctl;
 
 use event_listener::Event;
 use futures_lite::{future, io, prelude::*};
@@ -453,6 +449,7 @@ impl ChildStdin {
     /// Unwraps the inner I/O handle.
     ///
     /// This method will **not** put the I/O handle back into blocking mode.
+    /// If blocking mode is required, this can be done with [`set_blocking`].
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -460,11 +457,12 @@ impl ChildStdin {
     /// ```no_run
     /// # futures_lite::future::block_on(async {
     /// use async_process::Command;
+    /// use std::process::Stdio;
     ///
-    /// let mut ls_child = Command::new("ls").spawn()?;
-    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    /// let mut ls_child = Command::new("ls").stdin(Stdio::piped()).spawn()?;
+    /// let stdio:Stdio = ls_child.stdin.take().unwrap().into_inner().await?.into();
     ///
-    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
+    /// let mut echo_child = Command::new("echo").arg("./").stdout(stdio).spawn()?;
     ///
     /// # std::io::Result::Ok(()) });
     /// ```
@@ -510,18 +508,19 @@ impl ChildStdout {
     /// Unwraps the inner I/O handle.
     ///
     /// This method will **not** put the I/O handle back into blocking mode.
+    /// If blocking mode is required, this can be done with [`set_blocking`].
     /// You can use it to associate to the next process.
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// # futures_lite::future::block_on(async {
     /// use async_process::Command;
     /// use std::process::Stdio;
     /// use std::io::Read;
     ///
     /// let mut ls_child = Command::new("ls").stdout(Stdio::piped()).spawn()?;
-    /// let stdio :Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    /// let stdio:Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
     ///
     /// let mut echo_child = Command::new("echo").stdin(stdio).stdout(Stdio::piped()).spawn()?;
     /// let mut buf = vec![];
@@ -529,13 +528,15 @@ impl ChildStdout {
     /// # std::io::Result::Ok(()) });
     /// ```
     pub async fn into_inner(self) -> io::Result<std::process::ChildStdout> {
+        let stdout;
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                self.0.into_inner().await
+                stdout = self.0.into_inner().await;
             } else if #[cfg(unix)] {
-                self.0.into_inner()
+                stdout = self.0.into_inner();
             }
         }
+        stdout
     }
 }
 
@@ -562,6 +563,7 @@ impl ChildStderr {
     /// Unwraps the inner I/O handle.
     ///
     /// This method will **not** put the I/O handle back into blocking mode.
+    /// If blocking mode is required, this can be done with [`set_blocking`].
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -569,12 +571,12 @@ impl ChildStderr {
     /// ```no_run
     /// # futures_lite::future::block_on(async {
     /// use async_process::Command;
+    /// use std::process::Stdio;
     ///
-    /// let mut ls_child = Command::new("ls").spawn()?;
-    /// let stdio : std::process::Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    /// let mut ls_child = Command::new("ls").arg("x").stderr(Stdio::piped()).spawn()?;
+    /// let stdio:Stdio = ls_child.stderr.take().unwrap().into_inner().await?.into();
     ///
-    /// let mut echo_child = Command::new("echo").stdout(stdio).spawn()?;
-    ///
+    /// let mut echo_child = Command::new("echo").stdin(stdio).spawn()?;
     /// # std::io::Result::Ok(()) });
     /// ```
     pub async fn into_inner(self) -> io::Result<std::process::ChildStderr> {
@@ -937,27 +939,37 @@ impl Command {
     }
 }
 
+#[cfg(unix)]
+/// Moves `Fd` out of nonblocking mode.
+pub fn set_blocking<T: std::os::unix::io::AsRawFd>(stdout: T) -> io::Result<T> {
+    unsafe {
+        let res = libc::fcntl(stdout.as_raw_fd(), libc::F_GETFL);
+        let errno = libc::fcntl(
+            stdout.as_raw_fd(),
+            libc::F_SETFL,
+            !(!res | libc::O_NONBLOCK),
+        );
+
+        // Unix-like systems when errno is_minus_one then return last_os_error.
+        if errno == -1 {
+            return Err(io::Error::last_os_error());
+        }
+    }
+
+    Ok(stdout)
+}
+
 mod test {
 
-    // unix-like
-
-    //FIONBIO fionbio
-    //cvt(unsafe { libc::ioctl(*self.as_inner(), libc::FIONBIO, &mut nonblocking) }).map(drop)
-
-    // windows-like
-    //  let r = unsafe { c::ioctlsocket(self.0, c::FIONBIO as c_int, &mut nonblocking) };
-
-    //TODO: Thanks https://stackoverflow.com/questions/13554691/errno-11-resource-temporarily-unavailable.
-    // man read.
+    #[cfg(unix)]
     #[test]
     fn test_into_inner() {
         futures_lite::future::block_on(async {
-            use crate::Command;
-            use std::io::Read;
+            use crate::{set_blocking, Command};
+
+            use std::io::{Read, Result};
             use std::process::Stdio;
             use std::str::from_utf8;
-            use std::thread::sleep;
-            use std::time::Duration;
 
             let mut ls_child = Command::new("cat")
                 .arg("Cargo.toml")
@@ -973,119 +985,13 @@ mod test {
                 .spawn()?;
 
             let mut buf = vec![];
-            // FIXME: read-to-end happend error. Need to repated call.
             let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
-
-            for i in 0..1000 {
-                dbg!(i);
-                let x = stdout.read_to_end(&mut buf);
-
-                match x {
-                    Ok(size) if size > 0 => {
-                        dbg!(size);
-                        break;
-                    }
-                    Err(e) => {
-                        dbg!(e);
-                    }
-                    _ => {}
-                }
-
-                stdout.read(&mut buf)?;
-                sleep(Duration::from_micros(200));
-            }
-
-            dbg!(from_utf8(&buf));
-
-            std::io::Result::Ok(())
-        })
-        .unwrap();
-    }
-
-    #[test]
-    fn test_into_inner1() {
-        futures_lite::future::block_on(async {
-            use std::io::Read;
-            use std::process::{Command, Stdio};
-            use std::str::from_utf8;
-
-            let mut ls_child = Command::new("cat")
-                .arg("Cargo.toml")
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let stdio: Stdio = ls_child.stdout.take().unwrap().into();
-
-            let mut echo_child = Command::new("grep")
-                .arg("async")
-                .stdin(stdio)
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let mut buf = vec![];
-            let mut stdout = echo_child.stdout.take().unwrap();
+            stdout = set_blocking(stdout)?;
 
             stdout.read_to_end(&mut buf)?;
-            dbg!(from_utf8(&buf));
+            dbg!(from_utf8(&buf).unwrap_or(""));
 
-            std::io::Result::Ok(())
-        })
-        .unwrap();
-    }
-
-    //ioctl
-    #[test]
-    fn test_into_inner_fixed() {
-        futures_lite::future::block_on(async {
-            use crate::Command;
-            use std::io::Read;
-            use std::process::Stdio;
-            use std::str::from_utf8;
-            use std::thread::sleep;
-            use std::time::Duration;
-
-            #[cfg(unix)]
-            use std::os::unix::io::AsRawFd;
-
-            #[cfg(unix)]
-            use libc::ioctl;
-
-            #[cfg(windows)]
-            use std::os::windows::io::AsRawSocket;
-
-            let mut ls_child = Command::new("cat")
-                .arg("Cargo.toml")
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let stdio: Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
-
-            let mut echo_child = Command::new("grep")
-                .arg("async")
-                .stdin(stdio)
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let mut buf = vec![];
-            let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
-
-            unsafe {
-                ioctl(stdout.as_raw_fd(), libc::FIONBIO, &mut false);
-            }
-
-            //TODO: after set first read_to_end may be come back EWOULDBLOCK , should avoid.
-
-            let x = stdout.read(&mut buf)?;
-            let x = stdout.read(&mut buf)?;
-
-
-            let x = stdout.read_to_end(&mut buf);
-            let x = stdout.read_to_end(&mut buf);
-
-
-            dbg!(from_utf8(&buf));
-
-            std::io::Result::Ok(())
+            Result::Ok(())
         })
         .unwrap();
     }
