@@ -469,7 +469,7 @@ impl ChildStdin {
     pub async fn into_inner(self) -> io::Result<std::process::ChildStdin> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                self.0.into_inner().await
+                Ok(self.0.into_inner().await)
             } else if #[cfg(unix)] {
                 self.0.into_inner()
             }
@@ -528,15 +528,13 @@ impl ChildStdout {
     /// # std::io::Result::Ok(()) });
     /// ```
     pub async fn into_inner(self) -> io::Result<std::process::ChildStdout> {
-        let stdout;
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                stdout = self.0.into_inner().await;
+                 Ok(self.0.into_inner().await)
             } else if #[cfg(unix)] {
-                stdout = self.0.into_inner();
+                 self.0.into_inner()
             }
         }
-        stdout
     }
 }
 
@@ -582,7 +580,7 @@ impl ChildStderr {
     pub async fn into_inner(self) -> io::Result<std::process::ChildStderr> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                self.0.into_inner().await
+                Ok(self.0.into_inner().await)
             } else if #[cfg(unix)] {
                 self.0.into_inner()
             }
