@@ -777,9 +777,9 @@ impl Command {
     /// ```
     pub fn spawn(&mut self) -> io::Result<Child> {
         let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.inner.stdin(stdin.unwrap_or(Stdio::inherit()));
-        self.inner.stdout(stdout.unwrap_or(Stdio::inherit()));
-        self.inner.stderr(stderr.unwrap_or(Stdio::inherit()));
+        self.inner.stdin(stdin.unwrap_or_else(Stdio::inherit));
+        self.inner.stdout(stdout.unwrap_or_else(Stdio::inherit));
+        self.inner.stderr(stderr.unwrap_or_else(Stdio::inherit));
 
         Child::new(self)
     }
@@ -829,9 +829,9 @@ impl Command {
     /// ```
     pub fn output(&mut self) -> impl Future<Output = io::Result<Output>> {
         let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.inner.stdin(stdin.unwrap_or(Stdio::null()));
-        self.inner.stdout(stdout.unwrap_or(Stdio::piped()));
-        self.inner.stderr(stderr.unwrap_or(Stdio::piped()));
+        self.inner.stdin(stdin.unwrap_or_else(Stdio::null));
+        self.inner.stdout(stdout.unwrap_or_else(Stdio::piped));
+        self.inner.stderr(stderr.unwrap_or_else(Stdio::piped));
 
         let child = Child::new(self);
         async { child?.output().await }

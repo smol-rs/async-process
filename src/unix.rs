@@ -29,7 +29,7 @@ pub trait CommandExt {
     /// will be called and the spawn operation will immediately return with a
     /// failure.
     ///
-    /// # Notes and Safety
+    /// # Safety
     ///
     /// This closure will be run in the context of the child process after a
     /// `fork`. This primarily means that any modifications made to memory on
