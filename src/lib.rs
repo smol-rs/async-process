@@ -60,6 +60,8 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
 
 #[cfg(windows)]
 use blocking::Unblock;
@@ -446,10 +448,7 @@ pub struct ChildStdin(
 );
 
 impl ChildStdin {
-    /// Unwraps the inner I/O handle.
-    ///
-    /// This method will **not** put the I/O handle back into blocking mode.
-    /// If blocking mode is required, this can be done with [`set_blocking`].
+    /// Convert async_process::ChildStdin into std::process::Stdio.
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -460,18 +459,22 @@ impl ChildStdin {
     /// use std::process::Stdio;
     ///
     /// let mut ls_child = Command::new("ls").stdin(Stdio::piped()).spawn()?;
-    /// let stdio:Stdio = ls_child.stdin.take().unwrap().into_inner().await?.into();
+    /// let stdio:Stdio = ls_child.stdin.take().unwrap().into_stdio().await?;
     ///
     /// let mut echo_child = Command::new("echo").arg("./").stdout(stdio).spawn()?;
     ///
     /// # std::io::Result::Ok(()) });
     /// ```
-    pub async fn into_inner(self) -> io::Result<std::process::ChildStdin> {
+    pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                Ok(self.0.into_inner().await)
+
+                Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-                self.0.into_inner()
+
+                let child_stdin = self.0.into_inner()?;
+                blocking_fd(child_stdin.as_raw_fd())?;
+                Ok(child_stdin.into())
             }
         }
     }
@@ -505,10 +508,7 @@ pub struct ChildStdout(
 );
 
 impl ChildStdout {
-    /// Unwraps the inner I/O handle.
-    ///
-    /// This method will **not** put the I/O handle back into blocking mode.
-    /// If blocking mode is required, this can be done with [`set_blocking`].
+    /// Convert async_process::ChildStdout into std::process::Stdio.
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -518,21 +518,26 @@ impl ChildStdout {
     /// use async_process::Command;
     /// use std::process::Stdio;
     /// use std::io::Read;
+    /// use futures_lite::AsyncReadExt;
     ///
     /// let mut ls_child = Command::new("ls").stdout(Stdio::piped()).spawn()?;
-    /// let stdio:Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
+    /// let stdio:Stdio = ls_child.stdout.take().unwrap().into_stdio().await?;
     ///
     /// let mut echo_child = Command::new("echo").stdin(stdio).stdout(Stdio::piped()).spawn()?;
     /// let mut buf = vec![];
-    /// echo_child.stdout.take().unwrap().into_inner().await.unwrap().read(&mut buf);
+    /// echo_child.stdout.take().unwrap().read(&mut buf).await;
     /// # std::io::Result::Ok(()) });
     /// ```
-    pub async fn into_inner(self) -> io::Result<std::process::ChildStdout> {
+    pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                 Ok(self.0.into_inner().await)
+
+                Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-                 self.0.into_inner()
+
+                let child_stdout = self.0.into_inner()?;
+                blocking_fd(child_stdout.as_raw_fd())?;
+                Ok(child_stdout.into())
             }
         }
     }
@@ -558,10 +563,7 @@ pub struct ChildStderr(
 );
 
 impl ChildStderr {
-    /// Unwraps the inner I/O handle.
-    ///
-    /// This method will **not** put the I/O handle back into blocking mode.
-    /// If blocking mode is required, this can be done with [`set_blocking`].
+    /// Convert async_process::ChildStderr into std::process::Stdio.
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -572,17 +574,21 @@ impl ChildStderr {
     /// use std::process::Stdio;
     ///
     /// let mut ls_child = Command::new("ls").arg("x").stderr(Stdio::piped()).spawn()?;
-    /// let stdio:Stdio = ls_child.stderr.take().unwrap().into_inner().await?.into();
+    /// let stdio:Stdio = ls_child.stderr.take().unwrap().into_stdio().await?;
     ///
     /// let mut echo_child = Command::new("echo").stdin(stdio).spawn()?;
     /// # std::io::Result::Ok(()) });
     /// ```
-    pub async fn into_inner(self) -> io::Result<std::process::ChildStderr> {
+    pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-                Ok(self.0.into_inner().await)
+
+                Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-                self.0.into_inner()
+
+                let child_stderr = self.0.into_inner()?;
+                blocking_fd(child_stderr.as_raw_fd())?;
+                Ok(child_stderr.into())
             }
         }
     }
@@ -934,5 +940,62 @@ impl Command {
 
         let child = Child::new(self);
         async { child?.output().await }
+    }
+}
+
+#[cfg(unix)]
+/// Moves `Fd` out of nonblocking mode.
+fn blocking_fd(fd: std::os::unix::io::RawFd) -> io::Result<()> {
+    let mut result = Ok(());
+
+    unsafe {
+        let res = libc::fcntl(fd, libc::F_GETFL);
+        let errno = libc::fcntl(fd, libc::F_SETFL, !(!res | libc::O_NONBLOCK));
+
+        // Unix-like systems when errno is_minus_one then return last_os_error.
+        if errno == -1 {
+            result = Err(io::Error::last_os_error());
+        }
+    }
+
+    result
+}
+
+#[cfg(unix)]
+mod test {
+
+    #[test]
+    fn test_into_inner() {
+        futures_lite::future::block_on(async {
+            use crate::Command;
+
+            use std::io::Result;
+            use std::process::Stdio;
+            use std::str::from_utf8;
+
+            use futures_lite::AsyncReadExt;
+
+            let mut ls_child = Command::new("cat")
+                .arg("Cargo.toml")
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            let stdio: Stdio = ls_child.stdout.take().unwrap().into_stdio().await?;
+
+            let mut echo_child = Command::new("grep")
+                .arg("async")
+                .stdin(stdio)
+                .stdout(Stdio::piped())
+                .spawn()?;
+
+            let mut buf = vec![];
+            let mut stdout = echo_child.stdout.take().unwrap();
+
+            stdout.read_to_end(&mut buf).await?;
+            dbg!(from_utf8(&buf).unwrap_or(""));
+
+            Result::Ok(())
+        })
+        .unwrap();
     }
 }

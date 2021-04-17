@@ -3,7 +3,6 @@
 use std::ffi::OsStr;
 use std::io;
 use std::os::unix::process::CommandExt as _;
-use std::process::{ChildStderr, ChildStdin, ChildStdout};
 
 use crate::Command;
 
@@ -118,82 +117,5 @@ impl CommandExt for Command {
     {
         self.inner.arg0(arg);
         self
-    }
-}
-
-/// Moves `Fd` out of nonblocking mode.
-pub fn set_blocking<T: Blocking>(stdout: T) -> io::Result<T> {
-    unsafe {
-        let res = libc::fcntl(stdout.as_raw_fd(), libc::F_GETFL);
-        let errno = libc::fcntl(
-            stdout.as_raw_fd(),
-            libc::F_SETFL,
-            !(!res | libc::O_NONBLOCK),
-        );
-
-        // Unix-like systems when errno is_minus_one then return last_os_error.
-        if errno == -1 {
-            return Err(io::Error::last_os_error());
-        }
-    }
-
-    Ok(stdout)
-}
-
-/// This is a sealed trait that allows types with the specified range of constraints to use `set_bloking`.
-pub trait Blocking: secret_jar::SuperBlocking {}
-
-/// Implement Blocking to `ChildStd*`, because getting the internal `ChildStd*` via `into_inner`
-/// may require restoring the file descriptor to blocking mode.
-impl Blocking for ChildStdin {}
-impl Blocking for ChildStdout {}
-impl Blocking for ChildStderr {}
-
-mod secret_jar {
-    use std::os::unix::io::AsRawFd;
-    use std::process::{ChildStderr, ChildStdin, ChildStdout};
-
-    pub trait SuperBlocking: AsRawFd {}
-
-    impl SuperBlocking for ChildStdin {}
-    impl SuperBlocking for ChildStdout {}
-    impl SuperBlocking for ChildStderr {}
-}
-
-mod test {
-
-    #[test]
-    fn test_into_inner() {
-        futures_lite::future::block_on(async {
-            use crate::unix::set_blocking;
-            use crate::Command;
-
-            use std::io::{Read, Result};
-            use std::process::Stdio;
-            use std::str::from_utf8;
-
-            let mut ls_child = Command::new("cat")
-                .arg("Cargo.toml")
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let stdio: Stdio = ls_child.stdout.take().unwrap().into_inner().await?.into();
-
-            let mut echo_child = Command::new("grep")
-                .arg("async")
-                .stdin(stdio)
-                .stdout(Stdio::piped())
-                .spawn()?;
-
-            let mut buf = vec![];
-            let mut stdout = echo_child.stdout.take().unwrap().into_inner().await?;
-            stdout = set_blocking(stdout)?;
-
-            stdout.read_to_end(&mut buf)?;
-            dbg!(from_utf8(&buf).unwrap_or(""));
-
-            Result::Ok(())
-        })
-        .unwrap();
     }
 }
