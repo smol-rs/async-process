@@ -74,6 +74,7 @@ use once_cell::sync::Lazy;
 pub use std::process::{ExitStatus, Output, Stdio};
 
 #[cfg(unix)]
+#[macro_use]
 pub mod unix;
 #[cfg(windows)]
 pub mod windows;
@@ -449,6 +450,7 @@ pub struct ChildStdin(
 
 impl ChildStdin {
     /// Convert async_process::ChildStdin into std::process::Stdio.
+    ///
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -468,10 +470,8 @@ impl ChildStdin {
     pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-
                 let child_stdin = self.0.into_inner()?;
                 blocking_fd(child_stdin.as_raw_fd())?;
                 Ok(child_stdin.into())
@@ -509,6 +509,7 @@ pub struct ChildStdout(
 
 impl ChildStdout {
     /// Convert async_process::ChildStdout into std::process::Stdio.
+    ///
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -531,10 +532,8 @@ impl ChildStdout {
     pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-
                 let child_stdout = self.0.into_inner()?;
                 blocking_fd(child_stdout.as_raw_fd())?;
                 Ok(child_stdout.into())
@@ -564,6 +563,7 @@ pub struct ChildStderr(
 
 impl ChildStderr {
     /// Convert async_process::ChildStderr into std::process::Stdio.
+    ///
     /// You can use it to associate to the next process.
     ///
     /// # Examples
@@ -582,10 +582,8 @@ impl ChildStderr {
     pub async fn into_stdio(self) -> io::Result<std::process::Stdio> {
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
-
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
-
                 let child_stderr = self.0.into_inner()?;
                 blocking_fd(child_stderr.as_raw_fd())?;
                 Ok(child_stderr.into())
@@ -946,19 +944,10 @@ impl Command {
 #[cfg(unix)]
 /// Moves `Fd` out of nonblocking mode.
 fn blocking_fd(fd: std::os::unix::io::RawFd) -> io::Result<()> {
-    let mut result = Ok(());
+    let res = syscall!(fcntl(fd, libc::F_GETFL));
+    syscall!(fcntl(fd, libc::F_SETFL, res & !libc::O_NONBLOCK));
 
-    unsafe {
-        let res = libc::fcntl(fd, libc::F_GETFL);
-        let errno = libc::fcntl(fd, libc::F_SETFL, !(!res | libc::O_NONBLOCK));
-
-        // Unix-like systems when errno is_minus_one then return last_os_error.
-        if errno == -1 {
-            result = Err(io::Error::last_os_error());
-        }
-    }
-
-    result
+    Ok(())
 }
 
 #[cfg(unix)]
