@@ -119,18 +119,3 @@ impl CommandExt for Command {
         self
     }
 }
-
-/// Helper macro to execute a system call that returns an `io::Result`.
-//
-// Macro must be defined before any modules that uses them.
-#[cfg(unix)]
-macro_rules! syscall {
-    ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{
-        let res = unsafe { libc::$fn($($arg, )*) };
-        if res == -1 {
-            return Err(std::io::Error::last_os_error());
-        } else {
-            res
-        }
-    }};
-}
