@@ -940,12 +940,12 @@ impl Command {
     }
 }
 
+/// Moves `Fd` out of non-blocking mode.
 #[cfg(unix)]
-/// Moves `Fd` out of nonblocking mode.
 fn blocking_fd(fd: std::os::unix::io::RawFd) -> io::Result<()> {
     // Helper macro to execute a system call that returns an `io::Result`.
     macro_rules! syscall {
-    ($fn: ident ( $($arg: expr),* $(,)* ) ) => {{
+        ($fn:ident ( $($arg:expr),* $(,)? ) ) => {{
             let res = unsafe { libc::$fn($($arg, )*) };
             if res == -1 {
                 return Err(std::io::Error::last_os_error());
