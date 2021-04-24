@@ -1,3 +1,7 @@
+# Version 1.1.0
+
+- Add `into_stdio` method to `ChildStdin`, `ChildStdout`, and `ChildStderr`. (#13)
+
 # Version 1.0.2
 
 - Use `kill_on_drop` only when the last reference to `ChildGuard` is dropped.
