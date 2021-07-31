@@ -381,3 +381,29 @@ fn child_status_preserved_with_kill_on_drop() {
         assert!(res.unwrap().status.success());
     })
 }
+
+#[test]
+#[cfg(windows)]
+fn child_as_raw_handle() {
+    use std::os::windows::io::AsRawHandle;
+    use winapi::um::processthreadsapi::GetProcessId;
+
+    future::block_on(async {
+        let p = Command::new("cmd.exe")
+            .arg("/C")
+            .arg("pause")
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+
+        let std_pid = p.id();
+        assert!(std_pid > 0);
+
+        let handle = p.as_raw_handle();
+
+        // We verify that we have the correct handle by obtaining the PID
+        // with the Windows API rather than via std:
+        let win_pid = unsafe { GetProcessId(handle as _) };
+        assert_eq!(win_pid, std_pid);
+    })
+}
