@@ -1,3 +1,7 @@
+# Version 1.2.0
+
+- Implement `AsRawHandle` on `Child` on `Windows` (#17)
+
 # Version 1.1.0
 
 - Add `into_stdio` method to `ChildStdin`, `ChildStdout`, and `ChildStderr`. (#13)
