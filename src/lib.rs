@@ -616,7 +616,6 @@ impl io::AsyncRead for ChildStderr {
 /// };
 /// # std::io::Result::Ok(()) });
 /// ```
-#[derive(Debug)]
 pub struct Command {
     inner: std::process::Command,
     stdin: Option<Stdio>,
@@ -937,6 +936,26 @@ impl Command {
 
         let child = Child::new(self);
         async { child?.output().await }
+    }
+}
+
+impl fmt::Debug for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            f.debug_struct("Command")
+                .field("inner", &self.inner)
+                .field("stdin", &self.stdin)
+                .field("stdout", &self.stdout)
+                .field("stderr", &self.stderr)
+                .field("reap_on_drop", &self.reap_on_drop)
+                .field("kill_on_drop", &self.kill_on_drop)
+                .finish()
+        } else {
+            // Stdlib outputs command-line in Debug for Command. This does the
+            // same, if not in "alternate" (long pretty-printed) mode.
+            // This is useful for logs, for example.
+            fmt::Debug::fmt(&self.inner, f)
+        }
     }
 }
 
