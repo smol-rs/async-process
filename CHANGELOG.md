@@ -1,3 +1,7 @@
+# Version 1.3.0
+
+- Improve debug implementation of `Command` (#18)
+
 # Version 1.2.0
 
 - Implement `AsRawHandle` on `Child` on `Windows` (#17)
