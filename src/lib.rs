@@ -352,6 +352,30 @@ impl Child {
     /// ```
     pub fn status(&mut self) -> impl Future<Output = io::Result<ExitStatus>> {
         self.stdin.take();
+        self.status_no_drop()
+    }
+
+    /// Waits for the process to exit.
+    ///
+    /// Unlike `status`, does not drop the stdin handle. You are responsible
+    /// for avoiding deadlocks caused by the child blocking on stdin while the
+    /// parent blocks on waiting for the process to exit.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # futures_lite::future::block_on(async {
+    /// use async_process::{Command, Stdio};
+    ///
+    /// let child = Command::new("cp")
+    ///     .arg("a.txt")
+    ///     .arg("b.txt")
+    ///     .spawn()?;
+    ///
+    /// println!("exit status: {}", child.status_no_drop().await?);
+    /// # std::io::Result::Ok(()) });
+    /// ```
+    pub fn status_no_drop(&self) -> impl Future<Output = io::Result<ExitStatus>> {
         let child = self.child.clone();
 
         async move {
