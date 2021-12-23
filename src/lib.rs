@@ -326,7 +326,7 @@ impl Child {
     /// }
     /// # std::io::Result::Ok(()) });
     /// ```
-    pub fn try_status(&mut self) -> io::Result<Option<ExitStatus>> {
+    pub fn try_status(&self) -> io::Result<Option<ExitStatus>> {
         self.child.lock().unwrap().get_mut().try_wait()
     }
 
