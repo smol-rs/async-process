@@ -407,3 +407,25 @@ fn child_as_raw_handle() {
         assert_eq!(win_pid, std_pid);
     })
 }
+
+#[test]
+#[cfg(unix)]
+fn test_spawn_multiple_with_stdio() {
+    let mut cmd = Command::new("/bin/sh");
+    cmd.arg("-c")
+        .arg("echo foo; echo bar 1>&2")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    future::block_on(async move {
+        let p1 = cmd.spawn().unwrap();
+        let out1 = p1.output().await.unwrap();
+        assert_eq!(out1.stdout, b"foo\n");
+        assert_eq!(out1.stderr, b"bar\n");
+
+        let p2 = cmd.spawn().unwrap();
+        let out2 = p2.output().await.unwrap();
+        assert_eq!(out2.stdout, b"foo\n");
+        assert_eq!(out2.stderr, b"bar\n");
+    });
+}
