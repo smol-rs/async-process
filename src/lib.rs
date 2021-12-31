@@ -618,9 +618,9 @@ impl io::AsyncRead for ChildStderr {
 /// ```
 pub struct Command {
     inner: std::process::Command,
-    stdin: Option<Stdio>,
-    stdout: Option<Stdio>,
-    stderr: Option<Stdio>,
+    stdin: bool,
+    stdout: bool,
+    stderr: bool,
     reap_on_drop: bool,
     kill_on_drop: bool,
 }
@@ -641,9 +641,9 @@ impl Command {
     pub fn new<S: AsRef<OsStr>>(program: S) -> Command {
         Command {
             inner: std::process::Command::new(program),
-            stdin: None,
-            stdout: None,
-            stderr: None,
+            stdin: false,
+            stdout: false,
+            stderr: false,
             reap_on_drop: true,
             kill_on_drop: false,
         }
@@ -785,7 +785,8 @@ impl Command {
     /// cmd.stdin(Stdio::null());
     /// ```
     pub fn stdin<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Command {
-        self.stdin = Some(cfg.into());
+        self.stdin = true;
+        self.inner.stdin(cfg);
         self
     }
 
@@ -800,7 +801,8 @@ impl Command {
     /// cmd.stdout(Stdio::piped());
     /// ```
     pub fn stdout<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Command {
-        self.stdout = Some(cfg.into());
+        self.stdout = true;
+        self.inner.stdout(cfg);
         self
     }
 
@@ -815,7 +817,8 @@ impl Command {
     /// cmd.stderr(Stdio::piped());
     /// ```
     pub fn stderr<T: Into<Stdio>>(&mut self, cfg: T) -> &mut Command {
-        self.stderr = Some(cfg.into());
+        self.stderr = true;
+        self.inner.stderr(cfg);
         self
     }
 
@@ -865,8 +868,6 @@ impl Command {
     ///
     /// If not configured, stdin, stdout and stderr will be set to [`Stdio::inherit()`].
     ///
-    /// After spawning the process, stdin, stdout, and stderr become unconfigured again.
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -877,10 +878,15 @@ impl Command {
     /// # std::io::Result::Ok(()) });
     /// ```
     pub fn spawn(&mut self) -> io::Result<Child> {
-        let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.inner.stdin(stdin.unwrap_or_else(Stdio::inherit));
-        self.inner.stdout(stdout.unwrap_or_else(Stdio::inherit));
-        self.inner.stderr(stderr.unwrap_or_else(Stdio::inherit));
+        if !self.stdin {
+            self.inner.stdin(Stdio::inherit());
+        }
+        if !self.stdout {
+            self.inner.stdout(Stdio::inherit());
+        }
+        if !self.stderr {
+            self.inner.stderr(Stdio::inherit());
+        }
 
         Child::new(self)
     }
@@ -888,8 +894,6 @@ impl Command {
     /// Executes the command, waits for it to exit, and returns the exit status.
     ///
     /// If not configured, stdin, stdout and stderr will be set to [`Stdio::inherit()`].
-    ///
-    /// After spawning the process, stdin, stdout, and stderr become unconfigured again.
     ///
     /// # Examples
     ///
@@ -914,8 +918,6 @@ impl Command {
     /// If not configured, stdin will be set to [`Stdio::null()`], and stdout and stderr will be
     /// set to [`Stdio::piped()`].
     ///
-    /// After spawning the process, stdin, stdout, and stderr become unconfigured again.
-    ///
     /// # Examples
     ///
     /// ```no_run
@@ -929,10 +931,15 @@ impl Command {
     /// # std::io::Result::Ok(()) });
     /// ```
     pub fn output(&mut self) -> impl Future<Output = io::Result<Output>> {
-        let (stdin, stdout, stderr) = (self.stdin.take(), self.stdout.take(), self.stderr.take());
-        self.inner.stdin(stdin.unwrap_or_else(Stdio::null));
-        self.inner.stdout(stdout.unwrap_or_else(Stdio::piped));
-        self.inner.stderr(stderr.unwrap_or_else(Stdio::piped));
+        if !self.stdin {
+            self.inner.stdin(Stdio::null());
+        }
+        if !self.stdout {
+            self.inner.stdout(Stdio::piped());
+        }
+        if !self.stderr {
+            self.inner.stderr(Stdio::piped());
+        }
 
         let child = Child::new(self);
         async { child?.output().await }
