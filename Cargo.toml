@@ -3,15 +3,13 @@ name = "async-process"
 # When publishing a new version:
 # - Update CHANGELOG.md
 # - Create "v1.x.y" git tag
-version = "1.3.0"
+version = "1.4.0"
 authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 edition = "2018"
 rust-version = "1.46"
 description = "Async interface for working with processes"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/smol-rs/async-process"
-homepage = "https://github.com/smol-rs/async-process"
-documentation = "https://docs.rs/async-process"
 keywords = ["process", "spawn", "command", "subprocess", "child"]
 categories = ["asynchronous", "os"]
 exclude = ["/.*"]

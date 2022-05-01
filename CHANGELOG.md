@@ -1,3 +1,8 @@
+# Version 1.4.0
+
+- `Command::spawn` and `Command::output` no longer unconfigure stdio streams (#20)
+- Implement `From<std::process::Command>` for `Command` (#21)
+
 # Version 1.3.0
 
 - Improve debug implementation of `Command` (#18)
