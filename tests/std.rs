@@ -76,7 +76,7 @@ pub async fn run_output(mut cmd: Command) -> String {
         .await
         .unwrap();
     assert!(p.status().await.unwrap().success());
-    return ret;
+    ret
 }
 
 #[test]
