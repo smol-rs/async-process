@@ -23,10 +23,9 @@ fn smoke() {
 
 #[test]
 fn smoke_failure() {
-    match Command::new("if-this-is-a-binary-then-the-world-has-ended").spawn() {
-        Ok(..) => panic!(),
-        Err(..) => {}
-    }
+    assert!(Command::new("if-this-is-a-binary-then-the-world-has-ended")
+        .spawn()
+        .is_err());
 }
 
 #[test]
