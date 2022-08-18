@@ -60,12 +60,12 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
-#[cfg(unix)]
-use std::os::unix::io::{AsRawFd, RawFd};
-#[cfg(all(not(async_process_no_io_safety), unix))]
-use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd};
 #[cfg(all(not(async_process_no_io_safety), unix))]
 use std::convert::{TryFrom, TryInto};
+#[cfg(all(not(async_process_no_io_safety), unix))]
+use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd};
+#[cfg(unix)]
+use std::os::unix::io::{AsRawFd, RawFd};
 
 #[cfg(windows)]
 use blocking::Unblock;
@@ -525,7 +525,7 @@ impl TryFrom<ChildStdin> for OwnedFd {
 }
 
 // TODO(notgull): Add mirroring AsRawHandle impls for all of the child handles
-// 
+//
 // at the moment this is pretty hard to do because of how they're wrapped in
 // Unblock, meaning that we can't always access the underlying handle. async-fs
 // gets around this by putting the handle in an Arc, but there's still some decision
