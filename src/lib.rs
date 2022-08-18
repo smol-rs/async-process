@@ -60,8 +60,12 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
+#[cfg(all(not(async_process_no_io_safety), unix))]
+use std::convert::{TryFrom, TryInto};
+#[cfg(all(not(async_process_no_io_safety), unix))]
+use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd};
 #[cfg(unix)]
-use std::os::unix::io::AsRawFd;
+use std::os::unix::io::{AsRawFd, RawFd};
 
 #[cfg(windows)]
 use blocking::Unblock;
@@ -497,6 +501,36 @@ impl io::AsyncWrite for ChildStdin {
     }
 }
 
+#[cfg(unix)]
+impl AsRawFd for ChildStdin {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl AsFd for ChildStdin {
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        self.0.as_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl TryFrom<ChildStdin> for OwnedFd {
+    type Error = io::Error;
+
+    fn try_from(value: ChildStdin) -> Result<Self, Self::Error> {
+        value.0.try_into()
+    }
+}
+
+// TODO(notgull): Add mirroring AsRawHandle impls for all of the child handles
+//
+// at the moment this is pretty hard to do because of how they're wrapped in
+// Unblock, meaning that we can't always access the underlying handle. async-fs
+// gets around this by putting the handle in an Arc, but there's still some decision
+// to be made about how to handle this (no pun intended)
+
 /// A handle to a child process's standard output (stdout).
 ///
 /// When a [`ChildStdout`] is dropped, the underlying handle gets closed.
@@ -551,6 +585,29 @@ impl io::AsyncRead for ChildStdout {
     }
 }
 
+#[cfg(unix)]
+impl AsRawFd for ChildStdout {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl AsFd for ChildStdout {
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        self.0.as_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl TryFrom<ChildStdout> for OwnedFd {
+    type Error = io::Error;
+
+    fn try_from(value: ChildStdout) -> Result<Self, Self::Error> {
+        value.0.try_into()
+    }
+}
+
 /// A handle to a child process's standard error (stderr).
 ///
 /// When a [`ChildStderr`] is dropped, the underlying handle gets closed.
@@ -598,6 +655,29 @@ impl io::AsyncRead for ChildStderr {
         buf: &mut [u8],
     ) -> Poll<io::Result<usize>> {
         Pin::new(&mut self.0).poll_read(cx, buf)
+    }
+}
+
+#[cfg(unix)]
+impl AsRawFd for ChildStderr {
+    fn as_raw_fd(&self) -> RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl AsFd for ChildStderr {
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        self.0.as_fd()
+    }
+}
+
+#[cfg(all(not(async_process_no_io_safety), unix))]
+impl TryFrom<ChildStderr> for OwnedFd {
+    type Error = io::Error;
+
+    fn try_from(value: ChildStderr) -> Result<Self, Self::Error> {
+        value.0.try_into()
     }
 }
 
