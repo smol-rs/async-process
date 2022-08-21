@@ -1,3 +1,8 @@
+# Version 1.5.0
+
+- Implement `AsRawFd` for `ChildStd*` (#23)
+- Implement I/O safety traits on Rust 1.63+ (#23)
+
 # Version 1.4.0
 
 - `Command::spawn` and `Command::output` no longer unconfigure stdio streams (#20)
