@@ -385,7 +385,7 @@ fn child_status_preserved_with_kill_on_drop() {
 #[cfg(windows)]
 fn child_as_raw_handle() {
     use std::os::windows::io::AsRawHandle;
-    use winapi::um::processthreadsapi::GetProcessId;
+    use windows_sys::Win32::System::Threading::GetProcessId;
 
     future::block_on(async {
         let p = Command::new("cmd.exe")
