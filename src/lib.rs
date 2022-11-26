@@ -145,12 +145,16 @@ impl Child {
 
         cfg_if::cfg_if! {
             if #[cfg(windows)] {
+                use std::ffi::c_void;
                 use std::os::windows::io::AsRawHandle;
                 use std::sync::mpsc;
 
-                use winapi::um::{
-                    winbase::{RegisterWaitForSingleObject, INFINITE},
-                    winnt::{BOOLEAN, HANDLE, PVOID, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE},
+                use windows_sys::Win32::{
+                    System::{
+                        Threading::{RegisterWaitForSingleObject, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE},
+                        WindowsProgramming::INFINITE,
+                    },
+                    Foundation::{BOOLEAN, HANDLE},
                 };
 
                 // This channel is used to simulate SIGCHLD on Windows.
@@ -168,12 +172,12 @@ impl Child {
 
 
                 // Called when a child exits.
-                unsafe extern "system" fn callback(_: PVOID, _: BOOLEAN) {
+                unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
                     callback_channel().0.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
-                let mut wait_object = std::ptr::null_mut();
+                let mut wait_object = 0;
                 let ret = unsafe {
                     RegisterWaitForSingleObject(
                         &mut wait_object,
