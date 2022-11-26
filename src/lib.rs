@@ -154,15 +154,22 @@ impl Child {
                 };
 
                 // This channel is used to simulate SIGCHLD on Windows.
-                static CALLBACK: Lazy<(mpsc::SyncSender<()>, Mutex<mpsc::Receiver<()>>)> =
-                    Lazy::new(|| {
+                fn callback_channel() -> (&'static mpsc::SyncSender<()>, &'static Mutex<mpsc::Receiver<()>>) {
+                    static CALLBACK: OnceCell<(mpsc::SyncSender<()>, Mutex<mpsc::Receiver<()>>)> =
+                        OnceCell::new();
+
+                    let (s, r) = CALLBACK.get_or_init_blocking(|| {
                         let (s, r) = mpsc::sync_channel(1);
                         (s, Mutex::new(r))
                     });
 
+                    (s, r)
+                }
+
+
                 // Called when a child exits.
                 unsafe extern "system" fn callback(_: PVOID, _: BOOLEAN) {
-                    CALLBACK.0.try_send(()).ok();
+                    callback_channel().0.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
@@ -183,7 +190,7 @@ impl Child {
 
                 // Waits for the next SIGCHLD signal.
                 fn wait_sigchld() {
-                    CALLBACK.1.lock().unwrap().recv().ok();
+                    callback_channel().1.lock().unwrap().recv().ok();
                 }
 
                 // Wraps a sync I/O type into an async I/O type.
