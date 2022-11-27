@@ -24,7 +24,7 @@ futures-lite = "1.11.0"
 autocfg = "1"
 
 [target.'cfg(unix)'.dependencies]
-async-io = "1.0.0"
+async-io = "1.8"
 libc = "0.2.88"
 
 [target.'cfg(unix)'.dependencies.signal-hook]
