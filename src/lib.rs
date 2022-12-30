@@ -170,7 +170,6 @@ impl Child {
                     (s, r)
                 }
 
-
                 // Called when a child exits.
                 unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
                     callback_channel().0.try_send(()).ok();
@@ -485,7 +484,7 @@ impl ChildStdin {
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
                 let child_stdin = self.0.into_inner()?;
-                blocking_fd(child_stdin.as_raw_fd())?;
+                blocking_fd(rustix::fd::AsFd::as_fd(&child_stdin))?;
                 Ok(child_stdin.into())
             }
         }
@@ -577,7 +576,7 @@ impl ChildStdout {
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
                 let child_stdout = self.0.into_inner()?;
-                blocking_fd(child_stdout.as_raw_fd())?;
+                blocking_fd(rustix::fd::AsFd::as_fd(&child_stdout))?;
                 Ok(child_stdout.into())
             }
         }
@@ -650,7 +649,7 @@ impl ChildStderr {
                 Ok(self.0.into_inner().await.into())
             } else if #[cfg(unix)] {
                 let child_stderr = self.0.into_inner()?;
-                blocking_fd(child_stderr.as_raw_fd())?;
+                blocking_fd(rustix::fd::AsFd::as_fd(&child_stderr))?;
                 Ok(child_stderr.into())
             }
         }
@@ -1063,22 +1062,9 @@ impl fmt::Debug for Command {
 
 /// Moves `Fd` out of non-blocking mode.
 #[cfg(unix)]
-fn blocking_fd(fd: std::os::unix::io::RawFd) -> io::Result<()> {
-    // Helper macro to execute a system call that returns an `io::Result`.
-    macro_rules! syscall {
-        ($fn:ident ( $($arg:expr),* $(,)? ) ) => {{
-            let res = unsafe { libc::$fn($($arg, )*) };
-            if res == -1 {
-                return Err(std::io::Error::last_os_error());
-            } else {
-                res
-            }
-        }};
-    }
-
-    let res = syscall!(fcntl(fd, libc::F_GETFL));
-    syscall!(fcntl(fd, libc::F_SETFL, res & !libc::O_NONBLOCK));
-
+fn blocking_fd(fd: rustix::fd::BorrowedFd<'_>) -> io::Result<()> {
+    let flags = rustix::fs::fcntl_getfl(fd)?;
+    rustix::fs::fcntl_setfl(fd, flags & !rustix::fs::OFlags::NONBLOCK)?;
     Ok(())
 }
 
