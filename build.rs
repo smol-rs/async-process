@@ -10,6 +10,9 @@ fn main() {
         }
     };
 
+    if !cfg.probe_rustc_version(1, 62) {
+        autocfg::emit("async_process_no_windows_raw_arg");
+    }
     if !cfg.probe_rustc_version(1, 63) {
         autocfg::emit("async_process_no_io_safety");
     }
