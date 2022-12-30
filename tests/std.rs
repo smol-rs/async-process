@@ -308,7 +308,7 @@ fn test_override_env() {
         let mut cmd = env_cmd();
         cmd.env_clear().env("RUN_TEST_NEW_ENV", "123");
         if let Some(p) = env::var_os("PATH") {
-            cmd.env("PATH", &p);
+            cmd.env("PATH", p);
         }
         let result = cmd.output().await.unwrap();
         let output = String::from_utf8_lossy(&result.stdout).to_string();
