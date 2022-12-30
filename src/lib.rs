@@ -520,6 +520,7 @@ impl AsRawFd for ChildStdin {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl AsFd for ChildStdin {
     fn as_fd(&self) -> BorrowedFd<'_> {
@@ -527,6 +528,7 @@ impl AsFd for ChildStdin {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl TryFrom<ChildStdin> for OwnedFd {
     type Error = io::Error;
@@ -604,6 +606,7 @@ impl AsRawFd for ChildStdout {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl AsFd for ChildStdout {
     fn as_fd(&self) -> BorrowedFd<'_> {
@@ -611,6 +614,7 @@ impl AsFd for ChildStdout {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl TryFrom<ChildStdout> for OwnedFd {
     type Error = io::Error;
@@ -677,6 +681,7 @@ impl AsRawFd for ChildStderr {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl AsFd for ChildStderr {
     fn as_fd(&self) -> BorrowedFd<'_> {
@@ -684,6 +689,7 @@ impl AsFd for ChildStderr {
     }
 }
 
+/// **Note:** This implementation is only available on Rust 1.63+.
 #[cfg(all(not(async_process_no_io_safety), unix))]
 impl TryFrom<ChildStderr> for OwnedFd {
     type Error = io::Error;
