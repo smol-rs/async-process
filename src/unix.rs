@@ -7,7 +7,10 @@ use std::os::unix::process::CommandExt as _;
 use crate::Command;
 
 /// Unix-specific extensions to the [`Command`] builder.
-pub trait CommandExt {
+///
+/// This trait is sealed: it cannot be implemented outside `async-process`.
+/// This is so that future additional methods are not breaking changes.
+pub trait CommandExt: crate::sealed::Sealed {
     /// Sets the child process's user ID. This translates to a
     /// `setuid` call in the child process. Failure in the `setuid`
     /// call will cause the spawn to fail.
@@ -88,6 +91,7 @@ pub trait CommandExt {
         S: AsRef<OsStr>;
 }
 
+impl crate::sealed::Sealed for Command {}
 impl CommandExt for Command {
     fn uid(&mut self, id: u32) -> &mut Command {
         self.inner.uid(id);

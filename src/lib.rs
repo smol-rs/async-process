@@ -82,6 +82,10 @@ pub mod unix;
 #[cfg(windows)]
 pub mod windows;
 
+mod sealed {
+    pub trait Sealed {}
+}
+
 /// An event delivered every time the SIGCHLD signal occurs.
 static SIGCHLD: Event = Event::new();
 
