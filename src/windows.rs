@@ -6,7 +6,10 @@ use std::os::windows::process::CommandExt as _;
 use crate::{Child, Command};
 
 /// Windows-specific extensions to the [`Command`] builder.
-pub trait CommandExt {
+///
+/// This trait is sealed: it cannot be implemented outside `async-process`.
+/// This is so that future additional methods are not breaking changes.
+pub trait CommandExt: crate::sealed::Sealed {
     /// Sets the [process creation flags][1] to be passed to `CreateProcess`.
     ///
     /// These will always be ORed with `CREATE_UNICODE_ENVIRONMENT`.
@@ -15,6 +18,7 @@ pub trait CommandExt {
     fn creation_flags(&mut self, flags: u32) -> &mut Command;
 }
 
+impl crate::sealed::Sealed for Command {}
 impl CommandExt for Command {
     fn creation_flags(&mut self, flags: u32) -> &mut Command {
         self.inner.creation_flags(flags);
