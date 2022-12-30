@@ -1063,8 +1063,23 @@ impl fmt::Debug for Command {
 /// Moves `Fd` out of non-blocking mode.
 #[cfg(unix)]
 fn blocking_fd(fd: rustix::fd::BorrowedFd<'_>) -> io::Result<()> {
-    let flags = rustix::fs::fcntl_getfl(fd)?;
-    rustix::fs::fcntl_setfl(fd, flags & !rustix::fs::OFlags::NONBLOCK)?;
+    cfg_if::cfg_if! {
+        // ioctl(FIONBIO) sets the flag atomically, but we use this only on Linux
+        // for now, as with the standard library, because it seems to behave
+        // differently depending on the platform.
+        // https://github.com/rust-lang/rust/commit/efeb42be2837842d1beb47b51bb693c7474aba3d
+        // https://github.com/libuv/libuv/blob/e9d91fccfc3e5ff772d5da90e1c4a24061198ca0/src/unix/poll.c#L78-L80
+        // https://github.com/tokio-rs/mio/commit/0db49f6d5caf54b12176821363d154384357e70a
+        if #[cfg(target_os = "linux")] {
+            rustix::io::ioctl_fionbio(fd, false)?;
+        } else {
+            let previous = rustix::fs::fcntl_getfl(fd)?;
+            let new = previous & !rustix::fs::OFlags::NONBLOCK;
+            if new != previous {
+                rustix::fs::fcntl_setfl(fd, new)?;
+            }
+        }
+    }
     Ok(())
 }
 
