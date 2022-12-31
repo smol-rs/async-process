@@ -22,6 +22,22 @@ fn smoke() {
 }
 
 #[test]
+fn smoke_with_driver() {
+    future::block_on({
+        async_process::cleanup_zombies(async {
+            let p = if cfg!(target_os = "windows") {
+                Command::new("cmd").args(&["/C", "exit 0"]).spawn()
+            } else {
+                Command::new("true").spawn()
+            };
+            assert!(p.is_ok());
+            let mut p = p.unwrap();
+            assert!(p.status().await.unwrap().success());
+        })
+    })
+}
+
+#[test]
 fn smoke_failure() {
     assert!(Command::new("if-this-is-a-binary-then-the-world-has-ended")
         .spawn()
