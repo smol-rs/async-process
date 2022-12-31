@@ -230,11 +230,6 @@ cfg_if::cfg_if! {
                 use std::ffi::c_void;
                 use std::os::windows::io::AsRawHandle;
 
-                // Called when a child exits.
-                unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
-                    Reactor::get().pipe.event.notify_additional(1);
-                }
-
                 use windows_sys::Win32::{
                     System::{
                         Threading::{RegisterWaitForSingleObject, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE},
@@ -242,6 +237,11 @@ cfg_if::cfg_if! {
                     },
                     Foundation::{BOOLEAN, HANDLE},
                 };
+
+                // Called when a child exits.
+                unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
+                    Reactor::get().pipe.event.notify_additional(1);
+                }
 
                 // Register this child process to invoke `callback` on exit.
                 let mut wait_object = 0;
