@@ -10,7 +10,7 @@
 //! `Child` leaks its resources.
 //!
 //! However, note that you can reap zombie processes without spawning the "async-process" thread
-//! by calling the [`cleanup_zombies`] method. The "async-process" method is therefore only spawned
+//! by calling the [`cleanup_zombies`] method. The "async-process" thread is therefore only spawned
 //! if no other thread calls [`cleanup_zombies`].
 //!
 //! This crate uses [`async-io`] for async I/O on Unix-like systems and [`blocking`] for async I/O
