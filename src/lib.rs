@@ -164,13 +164,11 @@ impl Reaper {
             'poll_zombies: loop {
                 // Only poll a set number of zombies at a time to avoid starvation.
                 for _ in 0..100 {
-                    // If we've reached the list's end, break out of the loop.
-                    if i == zombies.len() {
-                        break 'poll_zombies;
-                    }
-
                     // Get the zombie process.
-                    let zombie = &mut zombies[i];
+                    let zombie = match zombies.get_mut(i) {
+                        Some(zombie) => zombie,
+                        None => break 'poll_zombies,
+                    };
 
                     // Try to wait on it. If it's done, remove it from the list.
                     if let Ok(None) = zombie.try_wait() {
@@ -243,7 +241,7 @@ cfg_if::cfg_if! {
                 loop {
                     // If there's already a completed process, decrement and return.
                     if completed > 0 {
-                        if let Err(actual) = 
+                        if let Err(actual) =
                             self.complete.compare_exchange(completed, completed - 1, Ordering::SeqCst, Ordering::SeqCst) {
                             completed = actual;
                             continue;
@@ -265,7 +263,7 @@ cfg_if::cfg_if! {
 
                         // Wait for the next completed process.
                         listener.await;
-                        
+
                         // Loop around and try again.
                         completed = self.complete.load(Ordering::Acquire);
                     }

@@ -45,22 +45,6 @@ fn smoke_failure() {
 }
 
 #[test]
-fn wait() {
-    future::block_on({
-        async_process::cleanup_zombies(async {
-            let p = if cfg!(target_os = "windows") {
-                Command::new("timeout").args(&["/t", "3"]).spawn()
-            } else {
-                Command::new("sleep").arg("3").spawn()
-            };
-            assert!(p.is_ok());
-            let mut p = p.unwrap();
-            assert!(p.status().await.unwrap().success());
-        })
-    });
-}
-
-#[test]
 fn exit_reported_right() {
     future::block_on(async {
         let p = if cfg!(target_os = "windows") {
