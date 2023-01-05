@@ -194,21 +194,25 @@ impl Reaper {
     }
 
     /// Spawn a backup thread to poll the reactor if it isn't being driven already.
-    fn ensure_driven(&'static self) {
+    fn driven() -> &'static Self {
+        let this = Reaper::get();
+
         // Check to see if no one else is polling the reactor.
-        if let Some(guard) = self.polling_guard.try_lock() {
+        if let Some(guard) = this.polling_guard.try_lock() {
             // If no one else is polling the reactor, then spawn a backup thread to poll it.
             thread::Builder::new()
                 .name("async-process".to_string())
                 .spawn(move || {
                     #[cfg(unix)]
-                    async_io::block_on(self.reap(guard));
+                    async_io::block_on(this.reap(guard));
 
                     #[cfg(windows)]
-                    future::block_on(self.reap(guard));
+                    future::block_on(this.reap(guard));
                 })
                 .expect("cannot spawn async-process thread");
         }
+
+        this
     }
 }
 
@@ -456,7 +460,7 @@ impl Drop for ChildGuard {
             self.get_mut().kill().ok();
         }
         if self.reap_on_drop {
-            Reaper::get().push_zombie(self.inner.take().unwrap());
+            Reaper::driven().push_zombie(self.inner.take().unwrap());
         }
     }
 }
@@ -501,9 +505,6 @@ impl Child {
     fn new(cmd: &mut Command) -> io::Result<Child> {
         let mut child = cmd.inner.spawn()?;
 
-        // Make sure that some form of `SIGCHLD` processing is running.
-        Reaper::get().ensure_driven();
-
         // Convert sync I/O types into async I/O types.
         let stdin = child.stdin.take().map(wrap).transpose()?.map(ChildStdin);
         let stdout = child.stdout.take().map(wrap).transpose()?.map(ChildStdout);
@@ -525,7 +526,7 @@ impl Child {
         }
 
         // Register the child process in the global process list.
-        Reaper::get().register(&child)?;
+        Reaper::driven().register(&child)?;
 
         Ok(Child {
             stdin,
@@ -631,7 +632,7 @@ impl Child {
                     return Ok(status);
                 }
                 match listener.take() {
-                    None => listener = Some(Reaper::get().sigchld.listen()),
+                    None => listener = Some(Reaper::driven().sigchld.listen()),
                     Some(listener) => listener.await,
                 }
             }
