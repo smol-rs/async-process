@@ -36,12 +36,11 @@ default-features = false
 blocking = "1.0.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.45"
+version = "0.48"
 default-features = false
 features = [
     "Win32_Foundation",
     "Win32_System_Threading",
-    "Win32_System_WindowsProgramming"
 ]
 
 [dev-dependencies]
