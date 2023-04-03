@@ -154,11 +154,10 @@ impl Child {
                 use std::sync::mpsc;
 
                 use windows_sys::Win32::{
-                    System::{
-                        Threading::{RegisterWaitForSingleObject, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE},
-                        WindowsProgramming::INFINITE,
-                    },
                     Foundation::{BOOLEAN, HANDLE},
+                    System::Threading::{
+                        RegisterWaitForSingleObject, INFINITE, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE,
+                    },
                 };
 
                 // This channel is used to simulate SIGCHLD on Windows.
