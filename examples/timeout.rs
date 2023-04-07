@@ -52,7 +52,7 @@ fn main() -> io::Result<()> {
             io::Result::Ok(false)
         };
 
-        // Run a future that times out after 5 seconds.
+        // Run a future that times out after 1 second.
         let timeout_s = 1;
         let timeout = async move {
             Timer::after(std::time::Duration::from_secs(timeout_s)).await;
