@@ -1,3 +1,10 @@
+# Version 1.7.0
+
+- Replace direct dependency on libc with rustix. (#31)
+- Reduce the number of syscalls used in the `into_stdio` method. (#31)
+- Add windows::CommandExt::raw_arg on Rust 1.62+. (#32)
+- Update windows-sys to 0.48. (#39)
+
 # Version 1.6.0
 
 - Switch from `winapi` to `windows-sys` (#27)
