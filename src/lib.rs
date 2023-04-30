@@ -203,17 +203,24 @@ impl Child {
                 }
 
             } else if #[cfg(unix)] {
-                static SIGNALS: OnceCell<Mutex<signal_hook::iterator::Signals>> = OnceCell::new();
+                use async_signal::{Signal, Signals};
+
+                static SIGNALS: OnceCell<Signals> = OnceCell::new();
 
                 // Make sure the signal handler is registered before interacting with the process.
-                SIGNALS.get_or_init_blocking(|| Mutex::new(
-                    signal_hook::iterator::Signals::new([signal_hook::consts::SIGCHLD])
-                        .expect("cannot set signal handler for SIGCHLD"),
-                ));
+                SIGNALS.get_or_init_blocking(|| {
+                    Signals::new(Some(Signal::Child))
+                        .expect("Failed to register SIGCHLD handler")
+                });
 
                 // Waits for the next SIGCHLD signal.
                 fn wait_sigchld() {
-                    SIGNALS.get().expect("Signals not registered").lock().unwrap().forever().next();
+                    async_io::block_on(
+                        SIGNALS
+                            .get()
+                            .expect("Signals not registered")
+                            .next()
+                    );
                 }
 
                 // Wraps a sync I/O type into an async I/O type.
