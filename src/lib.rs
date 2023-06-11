@@ -207,7 +207,7 @@ impl Child {
 
                 // Make sure the signal handler is registered before interacting with the process.
                 SIGNALS.get_or_init_blocking(|| Mutex::new(
-                    signal_hook::iterator::Signals::new(&[signal_hook::consts::SIGCHLD])
+                    signal_hook::iterator::Signals::new([signal_hook::consts::SIGCHLD])
                         .expect("cannot set signal handler for SIGCHLD"),
                 ));
 

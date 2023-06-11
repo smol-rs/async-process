@@ -11,7 +11,7 @@ use futures_lite::{future, prelude::*};
 fn smoke() {
     future::block_on(async {
         let p = if cfg!(target_os = "windows") {
-            Command::new("cmd").args(&["/C", "exit 0"]).spawn()
+            Command::new("cmd").args(["/C", "exit 0"]).spawn()
         } else {
             Command::new("true").spawn()
         };
@@ -32,7 +32,7 @@ fn smoke_failure() {
 fn exit_reported_right() {
     future::block_on(async {
         let p = if cfg!(target_os = "windows") {
-            Command::new("cmd").args(&["/C", "exit 1"]).spawn()
+            Command::new("cmd").args(["/C", "exit 1"]).spawn()
         } else {
             Command::new("false").spawn()
         };
@@ -84,7 +84,7 @@ fn stdout_works() {
     future::block_on(async {
         if cfg!(target_os = "windows") {
             let mut cmd = Command::new("cmd");
-            cmd.args(&["/C", "echo foobar"]).stdout(Stdio::piped());
+            cmd.args(["/C", "echo foobar"]).stdout(Stdio::piped());
             assert_eq!(run_output(cmd).await, "foobar\r\n");
         } else {
             let mut cmd = Command::new("echo");
@@ -142,7 +142,7 @@ fn test_process_status() {
     future::block_on(async {
         let mut status = if cfg!(target_os = "windows") {
             Command::new("cmd")
-                .args(&["/C", "exit 1"])
+                .args(["/C", "exit 1"])
                 .status()
                 .await
                 .unwrap()
@@ -153,7 +153,7 @@ fn test_process_status() {
 
         status = if cfg!(target_os = "windows") {
             Command::new("cmd")
-                .args(&["/C", "exit 0"])
+                .args(["/C", "exit 0"])
                 .status()
                 .await
                 .unwrap()
@@ -186,7 +186,7 @@ fn test_process_output_output() {
             stderr,
         } = if cfg!(target_os = "windows") {
             Command::new("cmd")
-                .args(&["/C", "echo hello"])
+                .args(["/C", "echo hello"])
                 .output()
                 .await
                 .unwrap()
@@ -210,7 +210,7 @@ fn test_process_output_error() {
             stderr,
         } = if cfg!(target_os = "windows") {
             Command::new("cmd")
-                .args(&["/C", "mkdir ."])
+                .args(["/C", "mkdir ."])
                 .output()
                 .await
                 .unwrap()
@@ -228,7 +228,7 @@ fn test_process_output_error() {
 fn test_finish_once() {
     future::block_on(async {
         let mut prog = if cfg!(target_os = "windows") {
-            Command::new("cmd").args(&["/C", "exit 1"]).spawn().unwrap()
+            Command::new("cmd").args(["/C", "exit 1"]).spawn().unwrap()
         } else {
             Command::new("false").spawn().unwrap()
         };
@@ -240,7 +240,7 @@ fn test_finish_once() {
 fn test_finish_twice() {
     future::block_on(async {
         let mut prog = if cfg!(target_os = "windows") {
-            Command::new("cmd").args(&["/C", "exit 1"]).spawn().unwrap()
+            Command::new("cmd").args(["/C", "exit 1"]).spawn().unwrap()
         } else {
             Command::new("false").spawn().unwrap()
         };
@@ -254,7 +254,7 @@ fn test_wait_with_output_once() {
     future::block_on(async {
         let prog = if cfg!(target_os = "windows") {
             Command::new("cmd")
-                .args(&["/C", "echo hello"])
+                .args(["/C", "echo hello"])
                 .stdout(Stdio::piped())
                 .spawn()
                 .unwrap()
