@@ -1,6 +1,5 @@
 //! Windows-specific extensions.
 
-#[cfg(not(async_process_no_windows_raw_arg))]
 use std::ffi::OsStr;
 use std::os::windows::io::{AsRawHandle, RawHandle};
 use std::os::windows::process::CommandExt as _;
@@ -23,9 +22,6 @@ pub trait CommandExt: crate::sealed::Sealed {
     ///
     /// This is useful for passing arguments to `cmd.exe /c`, which doesn't follow
     /// `CommandLineToArgvW` escaping rules.
-    ///
-    /// **Note:** This method is only available on Rust 1.62+.
-    #[cfg(not(async_process_no_windows_raw_arg))]
     fn raw_arg<S: AsRef<OsStr>>(&mut self, text_to_append_as_is: S) -> &mut Command;
 }
 
@@ -36,7 +32,6 @@ impl CommandExt for Command {
         self
     }
 
-    #[cfg(not(async_process_no_windows_raw_arg))]
     fn raw_arg<S: AsRef<OsStr>>(&mut self, text_to_append_as_is: S) -> &mut Command {
         self.inner.raw_arg(text_to_append_as_is);
         self

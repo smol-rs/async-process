@@ -60,12 +60,10 @@ use std::thread;
 
 #[cfg(unix)]
 use async_io::Async;
-#[cfg(all(not(async_process_no_io_safety), unix))]
-use std::convert::{TryFrom, TryInto};
-#[cfg(all(not(async_process_no_io_safety), unix))]
-use std::os::unix::io::{AsFd, BorrowedFd, OwnedFd};
 #[cfg(unix)]
-use std::os::unix::io::{AsRawFd, RawFd};
+use std::convert::{TryFrom, TryInto};
+#[cfg(unix)]
+use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 
 #[cfg(windows)]
 use blocking::Unblock;
@@ -519,16 +517,14 @@ impl AsRawFd for ChildStdin {
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl AsFd for ChildStdin {
     fn as_fd(&self) -> BorrowedFd<'_> {
         self.0.as_fd()
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl TryFrom<ChildStdin> for OwnedFd {
     type Error = io::Error;
 
@@ -605,16 +601,14 @@ impl AsRawFd for ChildStdout {
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl AsFd for ChildStdout {
     fn as_fd(&self) -> BorrowedFd<'_> {
         self.0.as_fd()
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl TryFrom<ChildStdout> for OwnedFd {
     type Error = io::Error;
 
@@ -680,16 +674,14 @@ impl AsRawFd for ChildStderr {
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl AsFd for ChildStderr {
     fn as_fd(&self) -> BorrowedFd<'_> {
         self.0.as_fd()
     }
 }
 
-/// **Note:** This implementation is only available on Rust 1.63+.
-#[cfg(all(not(async_process_no_io_safety), unix))]
+#[cfg(unix)]
 impl TryFrom<ChildStderr> for OwnedFd {
     type Error = io::Error;
 
