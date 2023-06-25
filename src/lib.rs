@@ -192,10 +192,10 @@ cfg_if::cfg_if! {
             }
 
             /// Register a process object into this pipe.
-            fn register(&self, _child: &std::process::Child) -> io::Result<()> {
+            fn register(&self, child: &std::process::Child) -> io::Result<()> {
                 // Called when a child exits.
                 unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
-                    callback_channel().0.try_send(()).ok();
+                    Reaper::get().pipe.get().unwrap().sender.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
