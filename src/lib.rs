@@ -101,36 +101,33 @@ struct Reaper {
     zombies: Mutex<Vec<std::process::Child>>,
 
     /// The pipe that delivers signal notifications.
-    pipe: OnceCell<Pipe>,
+    pipe: Pipe,
 }
 
 impl Reaper {
     /// Get the singleton instance of the reaper.
     fn get() -> &'static Self {
-        static REAPER: Reaper = Reaper {
-            sigchld: Event::new(),
-            zombies: Mutex::new(Vec::new()),
-            pipe: OnceCell::new(),
-        };
+        static REAPER: OnceCell<Reaper> = OnceCell::new();
 
-        // Start up the reaper thread if we haven't already.
-        REAPER.pipe.get_or_init_blocking(|| {
+        REAPER.get_or_init_blocking(|| {
             thread::Builder::new()
                 .name("async-process".to_string())
-                .spawn(|| REAPER.reap())
+                .spawn(|| REAPER.get().unwrap().reap())
                 .expect("cannot spawn async-process thread");
 
-            Pipe::new().expect("cannot create SIGCHLD pipe")
-        });
-
-        &REAPER
+            Reaper {
+                sigchld: Event::new(),
+                zombies: Mutex::new(Vec::new()),
+                pipe: Pipe::new().expect("cannot create SIGCHLD pipe"),
+            }
+        })
     }
 
     /// Reap zombie processes forever.
     fn reap(&'static self) -> ! {
         loop {
             // Wait for the next SIGCHLD signal.
-            self.pipe.get().unwrap().wait();
+            self.pipe.wait();
 
             // Notify all listeners waiting on the SIGCHLD event.
             self.sigchld.notify(std::usize::MAX);
@@ -150,7 +147,7 @@ impl Reaper {
 
     /// Register a process with this reaper.
     fn register(&'static self, child: &std::process::Child) -> io::Result<()> {
-        self.pipe.get().unwrap().register(child)
+        self.pipe.register(child)
     }
 }
 
