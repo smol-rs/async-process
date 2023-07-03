@@ -23,7 +23,7 @@ futures-lite = "1.11.0"
 [target.'cfg(unix)'.dependencies]
 async-io = "1.8"
 async-signal = "0.2.0"
-rustix = { version = "0.37", default-features = false, features = ["std", "fs"] }
+rustix = { version = "0.38", default-features = false, features = ["std", "fs"] }
 
 [target.'cfg(windows)'.dependencies]
 blocking = "1.0.0"
