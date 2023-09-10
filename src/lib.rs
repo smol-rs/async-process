@@ -112,7 +112,7 @@ impl Reaper {
         REAPER.get_or_init_blocking(|| {
             thread::Builder::new()
                 .name("async-process".to_string())
-                .spawn(|| REAPER.get().unwrap().reap())
+                .spawn(|| REAPER.wait_blocking().reap())
                 .expect("cannot spawn async-process thread");
 
             Reaper {
@@ -321,6 +321,8 @@ impl Child {
     /// The "async-process" thread waits for processes in the global list and cleans up the
     /// resources when they exit.
     fn new(cmd: &mut Command) -> io::Result<Child> {
+        // Make sure the reaper exists before we spawn the child process.
+        let reaper = Reaper::get();
         let mut child = cmd.inner.spawn()?;
 
         // Convert sync I/O types into async I/O types.
@@ -329,7 +331,7 @@ impl Child {
         let stderr = child.stderr.take().map(wrap).transpose()?.map(ChildStderr);
 
         // Register the child process in the global list.
-        Reaper::get().register(&child)?;
+        reaper.register(&child)?;
 
         Ok(Child {
             stdin,
