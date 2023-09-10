@@ -75,7 +75,7 @@ use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 use blocking::Unblock;
 
 use async_lock::OnceCell;
-use event_listener::Event;
+use event_listener::{Event, EventListener};
 use futures_lite::{future, io, prelude::*};
 
 #[doc(no_inline)]
@@ -381,14 +381,21 @@ impl Child {
         let child = self.child.clone();
 
         async move {
-            let mut listener = None;
+            let listener = EventListener::new(&SIGCHLD);
+            let mut listening = false;
+            futures_lite::pin!(listener);
+
             loop {
                 if let Some(status) = child.lock().unwrap().get_mut().try_wait()? {
                     return Ok(status);
                 }
-                match listener.take() {
-                    None => listener = Some(SIGCHLD.listen()),
-                    Some(listener) => listener.await,
+
+                if listening {
+                    listener.as_mut().await;
+                    listening = false;
+                } else {
+                    listener.as_mut().listen();
+                    listening = true;
                 }
             }
         }
