@@ -26,6 +26,7 @@ async-signal = "0.2.0"
 rustix = { version = "0.38", default-features = false, features = ["std", "fs"] }
 
 [target.'cfg(windows)'.dependencies]
+async-channel = "1.9.0"
 blocking = "1.0.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
@@ -37,4 +38,5 @@ features = [
 ]
 
 [dev-dependencies]
+async-executor = "1.5.1"
 async-io = "1.8"
