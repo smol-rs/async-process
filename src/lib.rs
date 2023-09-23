@@ -1299,41 +1299,94 @@ fn blocking_fd(fd: rustix::fd::BorrowedFd<'_>) -> io::Result<()> {
     Ok(())
 }
 
-#[cfg(unix)]
+#[cfg(test)]
 mod test {
-
     #[test]
-    fn test_into_inner() {
-        futures_lite::future::block_on(async {
-            use crate::Command;
+    fn polled_driver() {
+        use super::{driver, Command};
+        use futures_lite::future;
+        use futures_lite::prelude::*;
 
-            use std::io::Result;
-            use std::process::Stdio;
-            use std::str::from_utf8;
+        let is_thread_spawned = || crate::Reaper::get().async_process_thread.is_completed();
 
-            use futures_lite::AsyncReadExt;
+        #[cfg(unix)]
+        fn command() -> Command {
+            let mut cmd = Command::new("sh");
+            cmd.arg("-c").arg("echo hello");
+            cmd
+        }
 
-            let mut ls_child = Command::new("cat")
-                .arg("Cargo.toml")
-                .stdout(Stdio::piped())
-                .spawn()?;
+        #[cfg(windows)]
+        fn command() -> Command {
+            let mut cmd = Command::new("cmd");
+            cmd.arg("/C").arg("echo hello");
+            cmd
+        }
 
-            let stdio: Stdio = ls_child.stdout.take().unwrap().into_stdio().await?;
+        future::block_on(async {
+            // Thread should not be spawned off the bat.
+            assert!(!is_thread_spawned());
 
-            let mut echo_child = Command::new("grep")
-                .arg("async")
-                .stdin(stdio)
-                .stdout(Stdio::piped())
-                .spawn()?;
+            // Spawn a driver.
+            let mut driver1 = Box::pin(driver());
+            future::poll_once(&mut driver1).await;
+            assert!(!is_thread_spawned());
 
-            let mut buf = vec![];
-            let mut stdout = echo_child.stdout.take().unwrap();
+            // We should be able to run the driver in parallel with a process future.
+            async {
+                (&mut driver1).await;
+            }
+            .or(async {
+                let output = command().output().await.unwrap();
+                assert_eq!(output.stdout, b"hello\n");
+            })
+            .await;
+            assert!(!is_thread_spawned());
 
-            stdout.read_to_end(&mut buf).await?;
-            dbg!(from_utf8(&buf).unwrap_or(""));
+            // Spawn a second driver.
+            let mut driver2 = Box::pin(driver());
+            future::poll_once(&mut driver2).await;
+            assert!(!is_thread_spawned());
 
-            Result::Ok(())
-        })
-        .unwrap();
+            // Poll both drivers in parallel.
+            async {
+                (&mut driver1).await;
+            }
+            .or(async {
+                (&mut driver2).await;
+            })
+            .or(async {
+                let output = command().output().await.unwrap();
+                assert_eq!(output.stdout, b"hello\n");
+            })
+            .await;
+            assert!(!is_thread_spawned());
+
+            // Once one is dropped, the other should take over.
+            drop(driver1);
+            assert!(!is_thread_spawned());
+
+            // Poll driver2 in parallel with a process future.
+            async {
+                (&mut driver2).await;
+            }
+            .or(async {
+                let output = command().output().await.unwrap();
+                assert_eq!(output.stdout, b"hello\n");
+            })
+            .await;
+            assert!(!is_thread_spawned());
+
+            // Once driver2 is dropped, the thread should not be spawned, as there are no active
+            // child processes..
+            drop(driver2);
+            assert!(!is_thread_spawned());
+
+            // We should now be able to poll the process future independently, it will spawn the
+            // thread.
+            let output = command().output().await.unwrap();
+            assert_eq!(output.stdout, b"hello\n");
+            assert!(is_thread_spawned());
+        });
     }
 }

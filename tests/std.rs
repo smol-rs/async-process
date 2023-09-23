@@ -447,3 +447,39 @@ fn test_spawn_multiple_with_stdio() {
         assert_eq!(out2.stderr, b"bar\n");
     });
 }
+
+#[cfg(unix)]
+#[test]
+fn test_into_inner() {
+    futures_lite::future::block_on(async {
+        use crate::Command;
+
+        use std::io::Result;
+        use std::process::Stdio;
+        use std::str::from_utf8;
+
+        use futures_lite::AsyncReadExt;
+
+        let mut ls_child = Command::new("cat")
+            .arg("Cargo.toml")
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        let stdio: Stdio = ls_child.stdout.take().unwrap().into_stdio().await?;
+
+        let mut echo_child = Command::new("grep")
+            .arg("async")
+            .stdin(stdio)
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        let mut buf = vec![];
+        let mut stdout = echo_child.stdout.take().unwrap();
+
+        stdout.read_to_end(&mut buf).await?;
+        dbg!(from_utf8(&buf).unwrap_or(""));
+
+        Result::Ok(())
+    })
+    .unwrap();
+}
