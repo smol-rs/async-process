@@ -1323,6 +1323,11 @@ mod test {
             cmd
         }
 
+        #[cfg(unix)]
+        const OUTPUT: &[u8] = b"hello\n";
+        #[cfg(windows)]
+        const OUTPUT: &[u8] = b"hello\r\n";
+
         future::block_on(async {
             // Thread should not be spawned off the bat.
             assert!(!is_thread_spawned());
@@ -1338,7 +1343,7 @@ mod test {
             }
             .or(async {
                 let output = command().output().await.unwrap();
-                assert_eq!(output.stdout, b"hello\n");
+                assert_eq!(output.stdout, OUTPUT);
             })
             .await;
             assert!(!is_thread_spawned());
@@ -1357,7 +1362,7 @@ mod test {
             })
             .or(async {
                 let output = command().output().await.unwrap();
-                assert_eq!(output.stdout, b"hello\n");
+                assert_eq!(output.stdout, OUTPUT);
             })
             .await;
             assert!(!is_thread_spawned());
@@ -1372,7 +1377,7 @@ mod test {
             }
             .or(async {
                 let output = command().output().await.unwrap();
-                assert_eq!(output.stdout, b"hello\n");
+                assert_eq!(output.stdout, OUTPUT);
             })
             .await;
             assert!(!is_thread_spawned());
@@ -1385,7 +1390,7 @@ mod test {
             // We should now be able to poll the process future independently, it will spawn the
             // thread.
             let output = command().output().await.unwrap();
-            assert_eq!(output.stdout, b"hello\n");
+            assert_eq!(output.stdout, OUTPUT);
             assert!(is_thread_spawned());
         });
     }
