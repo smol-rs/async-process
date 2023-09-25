@@ -1,3 +1,9 @@
+# Version 1.8.0
+
+- Move from `signal-hook` to the `async-signal` crate. (#42)
+- Reorganize the internals of this crate to be more coherent. (#46)
+- Bump to `event-listener` v3.0.0. (#43)
+
 # Version 1.7.0
 
 - Replace direct dependency on libc with rustix. (#31)
