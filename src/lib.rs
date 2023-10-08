@@ -67,8 +67,6 @@ use std::thread;
 #[cfg(unix)]
 use async_io::Async;
 #[cfg(unix)]
-use std::convert::{TryFrom, TryInto};
-#[cfg(unix)]
 use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 
 #[cfg(windows)]
