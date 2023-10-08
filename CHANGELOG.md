@@ -1,3 +1,7 @@
+# Version 1.8.1
+
+- Bump `async-signal` to v0.2.3. (#56)
+
 # Version 1.8.0
 
 - Move from `signal-hook` to the `async-signal` crate. (#42)
