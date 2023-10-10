@@ -158,7 +158,9 @@ impl Reaper {
     #[cold]
     fn start_driver_thread(&'static self) {
         #[cfg(test)]
-        DRIVER_THREAD_SPAWNED.store(true, Ordering::SeqCst);
+        DRIVER_THREAD_SPAWNED
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .unwrap_or_else(|_| unreachable!("Driver thread already spawned"));
 
         thread::Builder::new()
             .name("async-process".to_string())
