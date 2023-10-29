@@ -1,3 +1,9 @@
+# Version 2.0.0
+
+- **Breaking:** Remove the `pre_exec` extension function on Unix. It is still available through the `From<std::process::Command>` implementation on `Command`. (#54)
+- Add the `driver()` function, which allows the processes to be driven without a separate thread. (#52)
+- Bump `async-io` to v2.0.0 and `async-channel` to v2.0.0. (#60)
+
 # Version 1.8.1
 
 - Bump `async-signal` to v0.2.3. (#56)
