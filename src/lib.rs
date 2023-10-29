@@ -320,7 +320,7 @@ cfg_if::cfg_if! {
         }
 
         /// Wrap a file descriptor into a non-blocking I/O type.
-        fn wrap<T: std::os::unix::io::AsRawFd>(io: T) -> io::Result<Async<T>> {
+        fn wrap<T: std::os::unix::io::AsFd>(io: T) -> io::Result<Async<T>> {
             Async::new(io)
         }
     }
