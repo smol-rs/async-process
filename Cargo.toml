@@ -15,7 +15,7 @@ categories = ["asynchronous", "os"]
 exclude = ["/.*"]
 
 [dependencies]
-async-lock = "2.6.0"
+async-lock = "3.0.0"
 cfg-if = "1.0"
 event-listener = "3.0.0"
 futures-lite = "2.0.0"
