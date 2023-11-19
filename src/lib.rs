@@ -510,7 +510,7 @@ impl Child {
         let child = self.child.clone();
 
         async move {
-            let listener = EventListener::new(&Reaper::get().sigchld);
+            let listener = EventListener::new();
             let mut listening = false;
             futures_lite::pin!(listener);
 
@@ -523,7 +523,7 @@ impl Child {
                     listener.as_mut().await;
                     listening = false;
                 } else {
-                    listener.as_mut().listen();
+                    listener.as_mut().listen(&Reaper::get().sigchld);
                     listening = true;
                 }
             }
