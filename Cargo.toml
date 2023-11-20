@@ -30,7 +30,7 @@ async-channel = "2.0.0"
 blocking = "1.0.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.48"
+version = "0.52"
 default-features = false
 features = [
     "Win32_Foundation",
