@@ -1,3 +1,8 @@
+# Version 2.0.1
+
+- Update `event-listener` to v4.0.0. (#64)
+- Update `windows-sys` to v0.52.0. (#65)
+
 # Version 2.0.0
 
 - **Breaking:** Remove the `pre_exec` extension function on Unix. It is still available through the `From<std::process::Command>` implementation on `Command`. (#54)
