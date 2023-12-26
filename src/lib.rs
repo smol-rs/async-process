@@ -76,7 +76,7 @@ use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 use blocking::Unblock;
 
 use async_lock::{Mutex as AsyncMutex, OnceCell};
-use event_listener::{Event, EventListener};
+use event_listener::Event;
 use futures_lite::{future, io, prelude::*};
 
 #[doc(no_inline)]
@@ -510,22 +510,22 @@ impl Child {
         let child = self.child.clone();
 
         async move {
-            let listener = EventListener::new();
-            let mut listening = false;
-            futures_lite::pin!(listener);
-
             loop {
+                // Wait on the child process.
                 if let Some(status) = child.lock().unwrap().get_mut().try_wait()? {
                     return Ok(status);
                 }
 
-                if listening {
-                    listener.as_mut().await;
-                    listening = false;
-                } else {
-                    listener.as_mut().listen(&Reaper::get().sigchld);
-                    listening = true;
+                // Start listening.
+                event_listener::listener!(Reaper::get().sigchld => listener);
+
+                // Try again.
+                if let Some(status) = child.lock().unwrap().get_mut().try_wait()? {
+                    return Ok(status);
                 }
+
+                // Wait on the listener.
+                listener.await;
             }
         }
     }
