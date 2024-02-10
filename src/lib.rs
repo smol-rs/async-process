@@ -80,23 +80,12 @@ use futures_lite::{future, io, prelude::*};
 #[doc(no_inline)]
 pub use std::process::{ExitStatus, Output, Stdio};
 
-cfg_if::cfg_if! {
-    if #[cfg(any(
-        target_os = "linux",
-        target_os = "android"
-    ))] {
-        #[path = "reaper/wait.rs"]
-        mod reaper;
-    } else {
-        #[path = "reaper/signal.rs"]
-        mod reaper;
-    }
-}
-
 #[cfg(unix)]
 pub mod unix;
 #[cfg(windows)]
 pub mod windows;
+
+mod reaper;
 
 mod sealed {
     pub trait Sealed {}
