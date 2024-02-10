@@ -80,23 +80,12 @@ use futures_lite::{future, io, prelude::*};
 #[doc(no_inline)]
 pub use std::process::{ExitStatus, Output, Stdio};
 
-cfg_if::cfg_if! {
-    if #[cfg(any(
-        target_os = "linux",
-        target_os = "android"
-    ))] {
-        #[path = "reaper/wait.rs"]
-        mod reaper;
-    } else {
-        #[path = "reaper/signal.rs"]
-        mod reaper;
-    }
-}
-
 #[cfg(unix)]
 pub mod unix;
 #[cfg(windows)]
 pub mod windows;
+
+mod reaper;
 
 mod sealed {
     pub trait Sealed {}
@@ -175,11 +164,6 @@ impl Reaper {
                 future::block_on(driver);
             })
             .expect("cannot spawn async-process thread");
-    }
-
-    /// Reap zombie processes forever.
-    async fn reap(&'static self, driver_guard: reaper::Lock) -> ! {
-        self.sys.reap(driver_guard).await
     }
 
     /// Register a process with this reaper.
@@ -728,16 +712,9 @@ impl TryFrom<ChildStderr> for OwnedFd {
 /// }).await;
 /// # });
 /// ```
+#[allow(clippy::manual_async_fn)]
 #[inline]
 pub fn driver() -> impl Future<Output = Infallible> + Send + 'static {
-    struct CallOnDrop<F: FnMut()>(F);
-
-    impl<F: FnMut()> Drop for CallOnDrop<F> {
-        fn drop(&mut self) {
-            (self.0)();
-        }
-    }
-
     async {
         // Get the reaper.
         let reaper = Reaper::get();
@@ -760,7 +737,7 @@ pub fn driver() -> impl Future<Output = Infallible> + Send + 'static {
 
         // Acquire the reaper lock and start polling the SIGCHLD event.
         let guard = reaper.sys.lock().await;
-        reaper.reap(guard).await
+        reaper.sys.reap(guard).await
     }
 }
 
@@ -1156,6 +1133,14 @@ fn blocking_fd(fd: rustix::fd::BorrowedFd<'_>) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+struct CallOnDrop<F: FnMut()>(F);
+
+impl<F: FnMut()> Drop for CallOnDrop<F> {
+    fn drop(&mut self) {
+        (self.0)();
+    }
 }
 
 #[cfg(test)]

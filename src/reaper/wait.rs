@@ -13,8 +13,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::task::{Context, Poll};
 
-pub(crate) type Lock = ();
-
 /// The zombie process reaper.
 pub(crate) struct Reaper {
     /// The channel for sending new runnables.
@@ -38,14 +36,8 @@ impl Reaper {
         }
     }
 
-    /// "Lock" the driver thread.
-    ///
-    /// Since multiple threads can drive the reactor at once, there is no need to
-    /// actually lock anything. So this function only exists for symmetry.
-    pub(crate) async fn lock(&self) {}
-
     /// Reap zombie processes forever.
-    pub(crate) async fn reap(&'static self, _: ()) -> ! {
+    pub(crate) async fn reap(&'static self) -> ! {
         loop {
             // Fetch the next task.
             let task = match self.recv.recv().await {
@@ -71,15 +63,17 @@ impl Reaper {
         child: &Mutex<crate::ChildGuard>,
     ) -> io::Result<std::process::ExitStatus> {
         future::poll_fn(|cx| {
-            // Lock the child and poll it once.
-            child
-                .lock()
-                .unwrap()
-                .inner
-                .inner
-                .as_mut()
-                .unwrap()
-                .poll_wait(cx)
+            // Lock the child.
+            let mut child = child.lock().unwrap();
+
+            // Get the inner child value.
+            let inner = match &mut child.inner {
+                super::ChildGuard::Wait(inner) => inner,
+                _ => unreachable!()
+            };
+
+            // Poll for the next value.
+            inner.inner.as_mut().unwrap().poll_wait(cx)
         })
         .await
     }
@@ -103,14 +97,6 @@ impl ChildGuard {
 
     /// Begin the reaping process for this child.
     pub(crate) fn reap(&mut self, reaper: &'static Reaper) {
-        struct CallOnDrop<F: FnMut()>(F);
-
-        impl<F: FnMut()> Drop for CallOnDrop<F> {
-            fn drop(&mut self) {
-                (self.0)();
-            }
-        }
-
         // Create a future for polling this child.
         let future = {
             let mut inner = self.inner.take().unwrap();
@@ -119,19 +105,19 @@ impl ChildGuard {
                 reaper.zombies.fetch_add(1, Ordering::Relaxed);
 
                 // Decrement the zombie count once we are done.
-                let _guard = CallOnDrop(|| {
+                let _guard = crate::CallOnDrop(|| {
                     reaper.zombies.fetch_sub(1, Ordering::SeqCst);
                 });
 
                 // Wait on this child forever.
                 let result = future::poll_fn(|cx| inner.poll_wait(cx)).await;
                 if let Err(e) = result {
-                    tracing::error!("error while polling zombie process: {}", e);
+                   tracing::error!("error while polling zombie process: {}", e);
                 }
             }
         };
 
-        // Create a future for scheduling this future.
+        // Create a function for scheduling this future.
         let schedule = move |runnable| {
             reaper.sender.try_send(runnable).ok();
         };
@@ -185,6 +171,18 @@ cfg_if::cfg_if! {
                     futures_lite::ready!(self.handle.poll_readable(cx))?;
                 }
             }
+        }
+
+        /// Tell if we are able to use this backend.
+        pub(crate) fn available() -> bool {
+            // Create a Pidfd for the current process and see if it works.
+            let result = process::pidfd_open(
+                process::getpid(),
+                process::PidfdFlags::empty()
+            );
+
+            // Tell if it was okay or not.
+            result.is_ok()
         }
     }
 }

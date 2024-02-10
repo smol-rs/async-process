@@ -131,9 +131,8 @@ impl ChildGuard {
 
     /// Begin the reaping process for this child.
     pub(crate) fn reap(&mut self, reaper: &'static Reaper) {
-        let mut zombies = reaper.zombies.lock().unwrap();
         if let Ok(None) = self.get_mut().try_wait() {
-            zombies.push(self.inner.take().unwrap());
+           reaper.zombies.lock().unwrap().push(self.inner.take().unwrap());
         }
     }
 }
@@ -178,8 +177,13 @@ cfg_if::cfg_if! {
             /// Register a process object into this pipe.
             fn register(&self, child: &std::process::Child) -> io::Result<()> {
                 // Called when a child exits.
+                #[allow(clippy::infallible_destructuring_match)]
                 unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
-                    crate::Reaper::get().sys.pipe.sender.try_send(()).ok();
+                    let reaper = match &crate::Reaper::get().sys {
+                        super::Reaper::Signal(reaper) => reaper,
+                    };
+                    
+                    reaper.pipe.sender.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
