@@ -9,6 +9,8 @@
 //! test to see if pidfd is supported first. If it is, we use wait. If not, we use
 //! signal.
 
+#![allow(irrefutable_let_patterns)]
+
 /// Enable the waiting reaper.
 #[cfg(any(target_os = "linux", target_os = "android"))]
 macro_rules! cfg_wait {

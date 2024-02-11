@@ -178,8 +178,13 @@ cfg_if::cfg_if! {
             /// Register a process object into this pipe.
             fn register(&self, child: &std::process::Child) -> io::Result<()> {
                 // Called when a child exits.
+                #[allow(clippy::infallible_destructuring_match)]
                 unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
-                    crate::Reaper::get().sys.pipe.sender.try_send(()).ok();
+                    let reaper = match &crate::Reaper::get().sys {
+                        super::Reaper::Signal(reaper) => reaper,
+                    };
+                    
+                    reaper.pipe.sender.try_send(()).ok();
                 }
 
                 // Register this child process to invoke `callback` on exit.
