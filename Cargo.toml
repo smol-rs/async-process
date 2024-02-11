@@ -17,7 +17,7 @@ exclude = ["/.*"]
 [dependencies]
 async-lock = "3.0.0"
 cfg-if = "1.0"
-event-listener = "4.0.1"
+event-listener = "5.0.0"
 futures-lite = "2.0.0"
 
 [target.'cfg(unix)'.dependencies]
@@ -40,6 +40,3 @@ features = [
 [dev-dependencies]
 async-executor = "1.5.1"
 async-io = "2.1.0"
-
-[patch.crates-io]
-event-listener = { git = "https://github.com/smol-rs/event-listener", branch = "notgull/break" }
