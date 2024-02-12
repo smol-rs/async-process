@@ -17,7 +17,7 @@ exclude = ["/.*"]
 [dependencies]
 async-lock = "3.0.0"
 cfg-if = "1.0"
-event-listener = "4.0.0"
+event-listener = "5.0.0"
 futures-lite = "2.0.0"
 
 [target.'cfg(unix)'.dependencies]
