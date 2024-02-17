@@ -1,3 +1,7 @@
+# Version 2.1.0
+
+- Update `event-listener` to v5.1.0. (#67)
+
 # Version 2.0.1
 
 - Update `event-listener` to v4.0.0. (#64)
