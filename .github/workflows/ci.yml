@@ -43,6 +43,9 @@ jobs:
         if: startsWith(matrix.rust, 'nightly')
         run: cargo check -Z features=dev_dep
       - run: cargo test
+      - run: cargo test
+        env:
+          RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
 
   msrv:
     runs-on: ${{ matrix.os }}
