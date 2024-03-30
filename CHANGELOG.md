@@ -1,3 +1,7 @@
+# Version 2.2.0
+
+- Port Linux to a new backend that tries to use `pidfd` if it is available. (#68)
+
 # Version 2.1.0
 
 - Update `event-listener` to v5.1.0. (#67)
