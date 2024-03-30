@@ -11,3 +11,12 @@ fn unix_sleep() {
         assert!(status.success());
     });
 }
+
+#[cfg(windows)]
+#[test]
+fn windows_sleep() {
+    block_on(async {
+        let status = Command::new("timeout").arg("5").status().await.unwrap();
+        assert!(status.success());
+    });
+}
