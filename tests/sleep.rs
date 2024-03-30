@@ -16,7 +16,11 @@ fn unix_sleep() {
 #[test]
 fn windows_sleep() {
     block_on(async {
-        let status = Command::new("timeout").arg("5").status().await.unwrap();
+        let status = Command::new("ping")
+            .args(["-n", "5", "127.0.0.1"])
+            .status()
+            .await
+            .unwrap();
         assert!(status.success());
     });
 }
