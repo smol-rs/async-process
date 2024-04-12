@@ -9,7 +9,7 @@ use async_task::Runnable;
 use futures_lite::future;
 
 use std::io;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::task::{Context, Poll};
 
@@ -22,7 +22,7 @@ pub(crate) struct Reaper {
     recv: Receiver<Runnable>,
 
     /// Number of zombie processes.
-    zombies: AtomicU64,
+    zombies: AtomicUsize,
 }
 
 impl Reaper {
@@ -32,7 +32,7 @@ impl Reaper {
         Self {
             sender,
             recv,
-            zombies: AtomicU64::new(0),
+            zombies: AtomicUsize::new(0),
         }
     }
 
