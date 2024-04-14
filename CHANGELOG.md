@@ -1,3 +1,7 @@
+# Version 2.2.1
+
+- Fix a compilation error for 32-bit operating systems by using a 32-bit zombie counter. (#75)
+
 # Version 2.2.0
 
 - Port Linux to a new backend that tries to use `pidfd` if it is available. (#68)
