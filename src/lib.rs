@@ -441,7 +441,7 @@ impl fmt::Debug for Child {
 
 /// A handle to a child process's standard input (stdin).
 ///
-/// When a [`ChildStdin`] is dropped, the underlying handle gets clossed. If the child process was
+/// When a [`ChildStdin`] is dropped, the underlying handle gets closed. If the child process was
 /// previously blocked on input, it becomes unblocked after dropping.
 #[derive(Debug)]
 pub struct ChildStdin(
