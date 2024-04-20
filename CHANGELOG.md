@@ -1,3 +1,7 @@
+# Version 2.2.2
+
+- Fix a typo in the docs for `ChildStdin`. (#76)
+
 # Version 2.2.1
 
 - Fix a compilation error for 32-bit operating systems by using a 32-bit zombie counter. (#75)
