@@ -12,13 +12,13 @@
 #![allow(irrefutable_let_patterns)]
 
 /// Enable the waiting reaper.
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_os = "linux")]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {$($tt)*};
 }
 
 /// Enable the waiting reaper.
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
+#[cfg(not(target_os = "linux"))]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {};
 }
@@ -41,7 +41,7 @@ use std::sync::Mutex;
 
 /// The underlying system reaper.
 pub(crate) enum Reaper {
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    #[cfg(target_os = "linux")]
     /// The reaper based on the wait backend.
     Wait(wait::Reaper),
 
@@ -51,7 +51,7 @@ pub(crate) enum Reaper {
 
 /// The wrapper around a child.
 pub(crate) enum ChildGuard {
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    #[cfg(target_os = "linux")]
     /// The child guard based on the wait backend.
     Wait(wait::ChildGuard),
 
@@ -61,7 +61,7 @@ pub(crate) enum ChildGuard {
 
 /// A lock on the reaper.
 pub(crate) enum Lock {
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    #[cfg(target_os = "linux")]
     /// The wait-based reaper needs no lock.
     Wait,
 

@@ -26,11 +26,11 @@ async-io = "2.1.0"
 async-signal = "0.2.3"
 rustix = { version = "0.38", default-features = false, features = ["std", "fs"] }
 
-[target.'cfg(any(target_os = "linux", target_os = "android"))'.dependencies]
+[target.'cfg(target_os = "linux")'.dependencies]
 async-channel = "2.0.0"
 async-task = "4.7.0"
 
-[target.'cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))'.dependencies]
+[target.'cfg(all(unix, not(target_os = "linux")))'.dependencies]
 rustix = { version = "0.38", default-features = false, features = ["std", "fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]

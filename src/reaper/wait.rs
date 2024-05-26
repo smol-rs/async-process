@@ -69,7 +69,7 @@ impl Reaper {
             // Get the inner child value.
             let inner = match &mut child.inner {
                 super::ChildGuard::Wait(inner) => inner,
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             // Poll for the next value.
@@ -112,7 +112,7 @@ impl ChildGuard {
                 // Wait on this child forever.
                 let result = future::poll_fn(|cx| inner.poll_wait(cx)).await;
                 if let Err(e) = result {
-                   tracing::error!("error while polling zombie process: {}", e);
+                    tracing::error!("error while polling zombie process: {}", e);
                 }
             }
         };
@@ -130,10 +130,7 @@ impl ChildGuard {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(any(
-        target_os = "linux",
-        target_os = "android"
-    ))] {
+    if #[cfg(target_os = "linux")] {
         use async_io::Async;
         use rustix::process;
         use std::os::unix::io::OwnedFd;
