@@ -45,6 +45,9 @@ features = [
     "Win32_System_Threading",
 ]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(async_process_force_signal_backend)'] }
+
 [dev-dependencies]
 async-executor = "1.5.1"
 async-io = "2.1.0"

@@ -48,7 +48,7 @@ impl Reaper {
             self.pipe.wait().await;
 
             // Notify all listeners waiting on the SIGCHLD event.
-            self.sigchld.notify(std::usize::MAX);
+            self.sigchld.notify(usize::MAX);
 
             // Reap zombie processes, but make sure we don't hold onto the lock for too long!
             let mut zombies = mem::take(&mut *self.zombies.lock().unwrap());
@@ -182,7 +182,7 @@ cfg_if::cfg_if! {
                     let reaper = match &crate::Reaper::get().sys {
                         super::Reaper::Signal(reaper) => reaper,
                     };
-                    
+
                     reaper.pipe.sender.try_send(()).ok();
                 }
 
