@@ -46,6 +46,34 @@ jobs:
       - run: cargo test
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
+  
+  test-android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [nightly, beta, stable]
+        target:
+          - aarch64-linux-android
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        # --no-self-update is necessary because the windows environment cannot self-update rustup.exe.
+        run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
+      - name: Install cross-compilation tools
+        uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.target }}
+      # On nightly and `-Z doctest-xcompile` is available,
+      # `$DOCTEST_XCOMPILE` is `-Zdoctest-xcompile`.
+      #
+      # On stable, `$DOCTEST_XCOMPILE` is not set.
+      # Once `-Z doctest-xcompile` is stabilized, the corresponding flag
+      # will be set to `$DOCTEST_XCOMPILE` (if it is available).
+      # - run: cargo test --verbose $DOCTEST_XCOMPILE
+      # workaround, 3 tests fail because they cant find /system/bin/sh
+      # in qemu
+      - run: cargo build --verbose
 
   msrv:
     runs-on: ${{ matrix.os }}
