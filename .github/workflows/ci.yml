@@ -46,7 +46,7 @@ jobs:
       - run: cargo test
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
-  
+
   test-android:
     runs-on: ubuntu-latest
     strategy:
@@ -70,10 +70,7 @@ jobs:
       # On stable, `$DOCTEST_XCOMPILE` is not set.
       # Once `-Z doctest-xcompile` is stabilized, the corresponding flag
       # will be set to `$DOCTEST_XCOMPILE` (if it is available).
-      # - run: cargo test --verbose $DOCTEST_XCOMPILE
-      # workaround, 3 tests fail because they cant find /system/bin/sh
-      # in qemu
-      - run: cargo build --verbose
+      - run: cargo test --verbose $DOCTEST_XCOMPILE
 
   msrv:
     runs-on: ${{ matrix.os }}
