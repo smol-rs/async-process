@@ -46,31 +46,43 @@ jobs:
       - run: cargo test
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
-  
-  test-android:
-    runs-on: ubuntu-latest
+
+  cross:
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly, beta, stable]
-        target:
-          - aarch64-linux-android
+        os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        # --no-self-update is necessary because the windows environment cannot self-update rustup.exe.
-        run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
-      - name: Install cross-compilation tools
-        uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
-      # On nightly and `-Z doctest-xcompile` is available,
-      # `$DOCTEST_XCOMPILE` is `-Zdoctest-xcompile`.
-      #
-      # On stable, `$DOCTEST_XCOMPILE` is not set.
-      # Once `-Z doctest-xcompile` is stabilized, the corresponding flag
-      # will be set to `$DOCTEST_XCOMPILE` (if it is available).
-      - run: cargo test --verbose $DOCTEST_XCOMPILE
+    - uses: actions/checkout@v4
+    - name: Install Rust
+      run: rustup update stable
+    - name: Install cross
+      uses: taiki-e/install-action@cross
+    # We don't test BSDs, since we already test them in Cirrus.
+    - name: Android
+      if: startsWith(matrix.os, 'ubuntu')
+      run: cross test --target arm-linux-androideabi
+    - name: iOS
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        rustup target add aarch64-apple-ios
+        cross build --target aarch64-apple-ios
+    - name: Linux x32
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        rustup target add x86_64-unknown-linux-gnux32
+        cross check --target x86_64-unknown-linux-gnux32
+    - name: Fuchsia
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        rustup target add x86_64-unknown-fuchsia
+        cargo build --target x86_64-unknown-fuchsia
+    - name: illumos
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        rustup target add x86_64-unknown-illumos
+        cargo build --target x86_64-unknown-illumos
 
   msrv:
     runs-on: ${{ matrix.os }}
