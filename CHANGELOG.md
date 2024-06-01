@@ -1,3 +1,8 @@
+# Version 2.2.3
+
+- Fix builds on Android by having Android unconditionally use the signal reaper
+  backend. (#80)
+
 # Version 2.2.2
 
 - Fix a typo in the docs for `ChildStdin`. (#76)
