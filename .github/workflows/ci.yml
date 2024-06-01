@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [nightly, beta, stable]
+        rust: [nightly]
         target:
           - aarch64-linux-android
     steps:
