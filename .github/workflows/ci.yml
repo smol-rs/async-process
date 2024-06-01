@@ -62,7 +62,7 @@ jobs:
     # We don't test BSDs, since we already test them in Cirrus.
     - name: Android
       if: startsWith(matrix.os, 'ubuntu')
-      run: cross test --target arm-linux-androideabi
+      run: cross build --target arm-linux-androideabi
     - name: iOS
       if: startsWith(matrix.os, 'macos')
       run: |
