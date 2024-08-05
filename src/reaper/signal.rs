@@ -132,7 +132,11 @@ impl ChildGuard {
     /// Begin the reaping process for this child.
     pub(crate) fn reap(&mut self, reaper: &'static Reaper) {
         if let Ok(None) = self.get_mut().try_wait() {
-           reaper.zombies.lock().unwrap().push(self.inner.take().unwrap());
+            reaper
+                .zombies
+                .lock()
+                .unwrap()
+                .push(self.inner.take().unwrap());
         }
     }
 }
@@ -142,6 +146,7 @@ cfg_if::cfg_if! {
         use async_channel::{Sender, Receiver, bounded};
         use std::ffi::c_void;
         use std::os::windows::io::AsRawHandle;
+        use std::ptr;
 
         use windows_sys::Win32::{
             Foundation::{BOOLEAN, HANDLE},
@@ -187,7 +192,7 @@ cfg_if::cfg_if! {
                 }
 
                 // Register this child process to invoke `callback` on exit.
-                let mut wait_object = 0;
+                let mut wait_object = ptr::null_mut();
                 let ret = unsafe {
                     RegisterWaitForSingleObject(
                         &mut wait_object,
