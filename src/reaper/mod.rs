@@ -114,13 +114,13 @@ impl Reaper {
     pub(crate) async fn reap(&'static self, lock: Lock) -> ! {
         cfg_wait! {
             if let (Self::Wait(this), Lock::Wait) = (self, &lock) {
-                return this.reap().await;
+                this.reap().await;
             }
         }
 
         cfg_signal! {
             if let (Self::Signal(this), Lock::Signal(lock)) = (self, lock) {
-                return this.reap(lock).await;
+                this.reap(lock).await;
             }
         }
 
