@@ -1,3 +1,7 @@
+# Version 2.2.4
+
+- Update to `windows-sys` v0.59. (#85)
+
 # Version 2.2.3
 
 - Fix builds on Android by having Android unconditionally use the signal reaper
