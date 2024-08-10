@@ -46,6 +46,7 @@ jobs:
       - run: cargo test
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
+        if: matrix.os != 'windows-latest'
 
   test-android:
     runs-on: ubuntu-latest

@@ -12,20 +12,27 @@
 #![allow(irrefutable_let_patterns)]
 
 /// Enable the waiting reaper.
-#[cfg(target_os = "linux")]
+#[cfg(any(windows, target_os = "linux"))]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {$($tt)*};
 }
 
 /// Enable the waiting reaper.
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(windows, target_os = "linux")))]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {};
 }
 
 /// Enable signals.
+#[cfg(not(windows))]
 macro_rules! cfg_signal {
     ($($tt:tt)*) => {$($tt)*};
+}
+
+/// Enable signals.
+#[cfg(windows)]
+macro_rules! cfg_signal {
+    ($($tt:tt)*) => {};
 }
 
 cfg_wait! {
@@ -41,31 +48,34 @@ use std::sync::Mutex;
 
 /// The underlying system reaper.
 pub(crate) enum Reaper {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(windows, target_os = "linux"))]
     /// The reaper based on the wait backend.
     Wait(wait::Reaper),
 
     /// The reaper based on the signal backend.
+    #[cfg(not(windows))]
     Signal(signal::Reaper),
 }
 
 /// The wrapper around a child.
 pub(crate) enum ChildGuard {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(windows, target_os = "linux"))]
     /// The child guard based on the wait backend.
     Wait(wait::ChildGuard),
 
     /// The child guard based on the signal backend.
+    #[cfg(not(windows))]
     Signal(signal::ChildGuard),
 }
 
 /// A lock on the reaper.
 pub(crate) enum Lock {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(windows, target_os = "linux"))]
     /// The wait-based reaper needs no lock.
     Wait,
 
     /// The lock for the signal-based reaper.
+    #[cfg(not(windows))]
     Signal(signal::Lock),
 }
 
