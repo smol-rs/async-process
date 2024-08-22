@@ -70,7 +70,7 @@ impl Reaper {
             // Get the inner child value.
             let inner = match &mut child.inner {
                 super::ChildGuard::Wait(inner) => inner,
-                #[allow(unreachable_patterns)]
+                #[cfg(not(windows))]
                 _ => unreachable!(),
             };
 

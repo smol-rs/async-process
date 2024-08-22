@@ -41,7 +41,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(async_process_force_signal
 
 [dev-dependencies]
 async-executor = "1.5.1"
-async-io = "2.1.0"
 
 [target.'cfg(windows)'.dev-dependencies.windows-sys]
 version = "0.59"
