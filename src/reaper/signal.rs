@@ -1,8 +1,9 @@
 //! A version of the reaper that waits for a signal to check for process progress.
 
 use async_lock::{Mutex as AsyncMutex, MutexGuard as AsyncMutexGuard};
+use async_signal::{Signal, Signals};
 use event_listener::Event;
-use futures_lite::future;
+use futures_lite::{future, prelude::*};
 
 use std::io;
 use std::mem;
@@ -141,103 +142,27 @@ impl ChildGuard {
     }
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(windows)] {
-        use async_channel::{Sender, Receiver, bounded};
-        use std::ffi::c_void;
-        use std::os::windows::io::AsRawHandle;
-        use std::ptr;
+/// Waits for the next SIGCHLD signal.
+struct Pipe {
+    /// The iterator over SIGCHLD signals.
+    signals: Signals,
+}
 
-        use windows_sys::Win32::{
-            Foundation::{BOOLEAN, HANDLE},
-            System::Threading::{
-                RegisterWaitForSingleObject, INFINITE, WT_EXECUTEINWAITTHREAD, WT_EXECUTEONLYONCE,
-            },
-        };
+impl Pipe {
+    /// Creates a new pipe.
+    fn new() -> io::Result<Pipe> {
+        Ok(Pipe {
+            signals: Signals::new(Some(Signal::Child))?,
+        })
+    }
 
-        /// Waits for the next SIGCHLD signal.
-        struct Pipe {
-            /// The sender channel for the SIGCHLD signal.
-            sender: Sender<()>,
+    /// Waits for the next SIGCHLD signal.
+    async fn wait(&self) {
+        (&self.signals).next().await;
+    }
 
-            /// The receiver channel for the SIGCHLD signal.
-            receiver: Receiver<()>,
-        }
-
-        impl Pipe {
-            /// Creates a new pipe.
-            fn new() -> io::Result<Pipe> {
-                let (sender, receiver) = bounded(1);
-                Ok(Pipe {
-                    sender,
-                    receiver
-                })
-            }
-
-            /// Waits for the next SIGCHLD signal.
-            async fn wait(&self) {
-                self.receiver.recv().await.ok();
-            }
-
-            /// Register a process object into this pipe.
-            fn register(&self, child: &std::process::Child) -> io::Result<()> {
-                // Called when a child exits.
-                #[allow(clippy::infallible_destructuring_match)]
-                unsafe extern "system" fn callback(_: *mut c_void, _: BOOLEAN) {
-                    let reaper = match &crate::Reaper::get().sys {
-                        super::Reaper::Signal(reaper) => reaper,
-                    };
-
-                    reaper.pipe.sender.try_send(()).ok();
-                }
-
-                // Register this child process to invoke `callback` on exit.
-                let mut wait_object = ptr::null_mut();
-                let ret = unsafe {
-                    RegisterWaitForSingleObject(
-                        &mut wait_object,
-                        child.as_raw_handle() as HANDLE,
-                        Some(callback),
-                        std::ptr::null_mut(),
-                        INFINITE,
-                        WT_EXECUTEINWAITTHREAD | WT_EXECUTEONLYONCE,
-                    )
-                };
-
-                if ret == 0 {
-                    Err(io::Error::last_os_error())
-                } else {
-                    Ok(())
-                }
-            }
-        }
-    } else if #[cfg(unix)] {
-        use async_signal::{Signal, Signals};
-        use futures_lite::prelude::*;
-
-        /// Waits for the next SIGCHLD signal.
-        struct Pipe {
-            /// The iterator over SIGCHLD signals.
-            signals: Signals,
-        }
-
-        impl Pipe {
-            /// Creates a new pipe.
-            fn new() -> io::Result<Pipe> {
-                Ok(Pipe {
-                    signals: Signals::new(Some(Signal::Child))?,
-                })
-            }
-
-            /// Waits for the next SIGCHLD signal.
-            async fn wait(&self) {
-                (&self.signals).next().await;
-            }
-
-            /// Register a process object into this pipe.
-            fn register(&self, _child: &std::process::Child) -> io::Result<()> {
-                Ok(())
-            }
-        }
+    /// Register a process object into this pipe.
+    fn register(&self, _child: &std::process::Child) -> io::Result<()> {
+        Ok(())
     }
 }

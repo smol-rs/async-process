@@ -2,7 +2,8 @@
 //!
 //! This uses:
 //!
-//! - pidfd on Linux/Android
+//! - pidfd on Linux
+//! - Waitable objects on Windows
 
 use async_channel::{Receiver, Sender};
 use async_task::Runnable;
@@ -69,6 +70,7 @@ impl Reaper {
             // Get the inner child value.
             let inner = match &mut child.inner {
                 super::ChildGuard::Wait(inner) => inner,
+                #[cfg(not(windows))]
                 _ => unreachable!(),
             };
 
@@ -180,6 +182,44 @@ cfg_if::cfg_if! {
 
             // Tell if it was okay or not.
             result.is_ok()
+        }
+    } else if #[cfg(windows)] {
+        use async_io::os::windows::Waitable;
+
+        /// Waitable version of `std::process::Child`.
+        struct WaitableChild {
+            inner: Waitable<std::process::Child>,
+        }
+
+        impl WaitableChild {
+            fn new(child: std::process::Child) -> io::Result<Self> {
+                Ok(Self {
+                    inner: Waitable::new(child)?
+                })
+            }
+
+            fn get_mut(&mut self) -> &mut std::process::Child {
+                // SAFETY: We never move the child out.
+                unsafe {
+                    self.inner.get_mut()
+                }
+            }
+
+            fn poll_wait(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<std::process::ExitStatus>> {
+                loop {
+                    if let Some(status) = self.get_mut().try_wait()? {
+                        return Poll::Ready(Ok(status));
+                    }
+
+                    // Wait for us to become readable.
+                    futures_lite::ready!(self.inner.poll_ready(cx))?;
+                }
+            }
+        }
+
+        /// Tell if we are able to use this backend.
+        pub(crate) fn available() -> bool {
+            true
         }
     }
 }
