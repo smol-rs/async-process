@@ -1,3 +1,7 @@
+# Version 2.3.0
+
+- Use a more efficient backend on Windows. (#87)
+
 # Version 2.2.4
 
 - Update to `windows-sys` v0.59. (#85)
