@@ -1077,6 +1077,16 @@ impl Command {
         let child = Child::new(self);
         async { child?.output().await }
     }
+
+    /// Cheaply convert to a `&std::process::Command` for places where the type from the standard library is expected.
+    pub fn as_std(&self) -> &std::process::Command {
+        &self.inner
+    }
+
+    /// Cheaply convert to a `&mut std::process::Command` for places where the type from the standard library is expected.
+    pub fn as_mut_std(&mut self) -> &mut std::process::Command {
+        &mut self.inner
+    }
 }
 
 impl From<std::process::Command> for Command {
