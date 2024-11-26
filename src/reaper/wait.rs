@@ -134,7 +134,7 @@ impl ChildGuard {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(target_os = "linux")] {
+    if #[cfg(any(target_os = "linux"))] {
         use async_io::Async;
         use rustix::process;
         use std::os::unix::io::OwnedFd;
@@ -223,5 +223,54 @@ cfg_if::cfg_if! {
         pub(crate) fn available() -> bool {
             true
         }
+    } else if #[cfg(target_os = "freebsd")] {
+        use async_io::os::kqueue::{Exit, Filter};
+        use std::num::NonZeroI32;
+
+        /// Waitable version of `std::process::Child`
+        struct WaitableChild {
+            child: std::process::Child,
+            handle: Filter<Exit>,
+        }
+
+        impl WaitableChild {
+            fn new(child: std::process::Child) -> io::Result<Self> {
+                // std::process::Child id must provide a positive PID value
+                let exit_filter = unsafe  { Filter::new(Exit::from_pid(NonZeroI32::new_unchecked(
+                        child
+                        .id()
+                        .try_into()
+                        .expect("could not transform pid to i32 type")
+                    )))?
+                };
+
+
+                Ok(Self {
+                    handle: exit_filter,
+                    child: child,
+                })
+            }
+
+            fn get_mut(&mut self) -> &mut std::process::Child {
+                &mut self.child
+            }
+
+            fn poll_wait(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<std::process::ExitStatus>> {
+                loop {
+                    if let Some(status) = self.child.try_wait()? {
+                        return Poll::Ready(Ok(status));
+                    }
+
+                    // Wait for us to become readable.
+                    futures_lite::ready!(self.handle.poll_ready(cx))?;
+                }
+            }
+        }
+
+        /// Tell if we are able to use this backend.
+        pub(crate) fn available() -> bool {
+            true
+        }
     }
+
 }
