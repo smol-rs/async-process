@@ -236,11 +236,12 @@ cfg_if::cfg_if! {
         impl WaitableChild {
             fn new(child: std::process::Child) -> io::Result<Self> {
                 // std::process::Child id must provide a positive PID value
-                let exit_filter = unsafe  { Filter::new(Exit::from_pid(NonZeroI32::new_unchecked(
+                let exit_filter = unsafe {
+                    Filter::new(Exit::from_pid(NonZeroI32::new_unchecked(
                         child
-                        .id()
-                        .try_into()
-                        .expect("could not transform pid to i32 type")
+                            .id()
+                            .try_into()
+                            .expect("could not transform pid to i32 type"),
                     )))?
                 };
 
