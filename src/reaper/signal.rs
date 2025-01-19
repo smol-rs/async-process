@@ -63,6 +63,7 @@ impl Reaper {
                     if let Ok(None) = zombies[i].try_wait() {
                         i += 1;
                     } else {
+                        #[allow(clippy::zombie_processes)] // removed only when process done or errored
                         zombies.swap_remove(i);
                     }
                 }
