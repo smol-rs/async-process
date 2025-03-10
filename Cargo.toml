@@ -24,7 +24,7 @@ tracing = { version = "0.1.40", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 async-signal = "0.2.3"
-rustix = { version = "0.38", default-features = false, features = ["std", "fs"] }
+rustix = { version = "1.0", default-features = false, features = ["std", "fs"] }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 async-channel = "2.0.0"
