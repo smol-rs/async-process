@@ -31,7 +31,7 @@ async-channel = "2.0.0"
 async-task = "4.7.0"
 
 [target.'cfg(all(unix, not(target_os = "linux")))'.dependencies]
-rustix = { version = "0.38", default-features = false, features = ["std", "fs", "process"] }
+rustix = { version = "1.0", default-features = false, features = ["std", "fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]
 blocking = "1.0.0"
@@ -49,4 +49,3 @@ features = [
     "Win32_Foundation",
     "Win32_System_Threading",
 ]
-
