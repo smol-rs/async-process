@@ -1,3 +1,7 @@
+# Version 2.3.1
+
+- Update rustix to 1.0. (#94)
+
 # Version 2.3.0
 
 - Use a more efficient backend on Windows. (#87)
