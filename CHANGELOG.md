@@ -1,3 +1,7 @@
+# Version 2.3.2
+
+- Fix build failure when compiled together with old versions of `async-signal`. (#96)
+
 # Version 2.3.1
 
 - Update rustix to 1.0. (#94)
