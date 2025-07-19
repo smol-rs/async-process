@@ -1,3 +1,11 @@
+# Version 2.4.0
+
+- Add a new optional `tracing` feature. When enabled, this feature adds logging
+  to the implementation. By default it is disabled. (#101)
+- Fix build failure when compiled together with old versions of `async-signal`. (#96)
+- Fix build failure with minimal-versions. (#101)
+- Update `windows-sys` to v0.60. (#99)
+
 # Version 2.3.1
 
 - Update rustix to 1.0. (#94)
