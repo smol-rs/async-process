@@ -77,7 +77,7 @@ fn signal_reported_right() {
         p.kill().unwrap();
         match p.status().await.unwrap().signal() {
             Some(9) => {}
-            result => panic!("not terminated by signal 9 (instead, {:?})", result),
+            result => panic!("not terminated by signal 9 (instead, {result:?})"),
         }
     })
 }
@@ -334,8 +334,7 @@ fn test_override_env() {
 
         assert!(
             output.contains("RUN_TEST_NEW_ENV=123"),
-            "didn't find RUN_TEST_NEW_ENV inside of:\n\n{}",
-            output
+            "didn't find RUN_TEST_NEW_ENV inside of:\n\n{output}"
         );
     })
 }
@@ -352,8 +351,7 @@ fn test_add_to_env() {
 
         assert!(
             output.contains("RUN_TEST_NEW_ENV=123"),
-            "didn't find RUN_TEST_NEW_ENV inside of:\n\n{}",
-            output
+            "didn't find RUN_TEST_NEW_ENV inside of:\n\n{output}"
         );
     })
 }
@@ -374,13 +372,11 @@ fn test_capture_env_at_spawn() {
 
         assert!(
             output.contains("RUN_TEST_NEW_ENV1=123"),
-            "didn't find RUN_TEST_NEW_ENV1 inside of:\n\n{}",
-            output
+            "didn't find RUN_TEST_NEW_ENV1 inside of:\n\n{output}"
         );
         assert!(
             output.contains("RUN_TEST_NEW_ENV2=456"),
-            "didn't find RUN_TEST_NEW_ENV2 inside of:\n\n{}",
-            output
+            "didn't find RUN_TEST_NEW_ENV2 inside of:\n\n{output}"
         );
     })
 }

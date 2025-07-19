@@ -68,6 +68,7 @@ impl Reaper {
             let mut child = child.lock().unwrap();
 
             // Get the inner child value.
+            #[allow(clippy::infallible_destructuring_match)] // false positive: should respect cfg
             let inner = match &mut child.inner {
                 super::ChildGuard::Wait(inner) => inner,
                 #[cfg(not(windows))]
@@ -113,8 +114,9 @@ impl ChildGuard {
 
                 // Wait on this child forever.
                 let result = future::poll_fn(|cx| inner.poll_wait(cx)).await;
-                if let Err(e) = result {
-                    tracing::error!("error while polling zombie process: {}", e);
+                if let Err(_e) = result {
+                    #[cfg(feature = "tracing")]
+                    tracing::error!("error while polling zombie process: {}", _e);
                 }
             }
         };
