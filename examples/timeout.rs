@@ -72,8 +72,8 @@ fn main() -> io::Result<()> {
             println!("The child exited.");
         }
 
-        println!("Stdout:\n{}", stdout);
-        println!("Stderr:\n{}", stderr);
+        println!("Stdout:\n{stdout}");
+        println!("Stderr:\n{stderr}");
 
         Ok(())
     })
