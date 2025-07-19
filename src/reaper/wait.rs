@@ -68,6 +68,7 @@ impl Reaper {
             let mut child = child.lock().unwrap();
 
             // Get the inner child value.
+            #[allow(clippy::infallible_destructuring_match)] // false positive: should respect cfg
             let inner = match &mut child.inner {
                 super::ChildGuard::Wait(inner) => inner,
                 #[cfg(not(windows))]
