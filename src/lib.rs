@@ -862,6 +862,22 @@ impl Command {
         self
     }
 
+    pub fn get_args(&self) -> std::process::CommandArgs<'_> {
+        self.inner.get_args()
+    }
+
+    pub fn get_envs(&self) -> std::process::CommandEnvs<'_> {
+        self.inner.get_envs()
+    }
+
+    pub fn get_current_dir(&self) -> Option<&Path> {
+        self.inner.get_current_dir()
+    }
+
+    pub fn get_program(&self) -> &OsStr {
+        self.inner.get_program()
+    }
+
     /// Removes an environment variable mapping.
     ///
     /// # Examples
@@ -1147,7 +1163,7 @@ impl<F: FnMut()> Drop for CallOnDrop<F> {
 mod test {
     #[test]
     fn polled_driver() {
-        use super::{driver, Command};
+        use super::{Command, driver};
         use futures_lite::future;
         use futures_lite::prelude::*;
 
