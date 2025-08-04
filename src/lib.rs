@@ -1163,7 +1163,7 @@ impl<F: FnMut()> Drop for CallOnDrop<F> {
 mod test {
     #[test]
     fn polled_driver() {
-        use super::{Command, driver};
+        use super::{driver, Command};
         use futures_lite::future;
         use futures_lite::prelude::*;
 
