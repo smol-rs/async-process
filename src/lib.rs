@@ -62,7 +62,7 @@ use std::fmt;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::task::{Context, Poll};
 use std::thread;
 
@@ -74,7 +74,6 @@ use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 #[cfg(windows)]
 use blocking::Unblock;
 
-use async_lock::OnceCell;
 use futures_lite::{future, io, prelude::*};
 
 #[doc(no_inline)]
@@ -117,9 +116,9 @@ struct Reaper {
 impl Reaper {
     /// Get the singleton instance of the reaper.
     fn get() -> &'static Self {
-        static REAPER: OnceCell<Reaper> = OnceCell::new();
+        static REAPER: OnceLock<Reaper> = OnceLock::new();
 
-        REAPER.get_or_init_blocking(|| Reaper {
+        REAPER.get_or_init(|| Reaper {
             sys: reaper::Reaper::new(),
             drivers: AtomicUsize::new(0),
             child_count: AtomicUsize::new(0),
