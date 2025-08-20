@@ -62,7 +62,7 @@ use std::fmt;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::task::{Context, Poll};
 use std::thread;
 
@@ -74,7 +74,6 @@ use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, OwnedFd, RawFd};
 #[cfg(windows)]
 use blocking::Unblock;
 
-use async_lock::OnceCell;
 use futures_lite::{future, io, prelude::*};
 
 #[doc(no_inline)]
@@ -117,9 +116,9 @@ struct Reaper {
 impl Reaper {
     /// Get the singleton instance of the reaper.
     fn get() -> &'static Self {
-        static REAPER: OnceCell<Reaper> = OnceCell::new();
+        static REAPER: OnceLock<Reaper> = OnceLock::new();
 
-        REAPER.get_or_init_blocking(|| Reaper {
+        REAPER.get_or_init(|| Reaper {
             sys: reaper::Reaper::new(),
             drivers: AtomicUsize::new(0),
             child_count: AtomicUsize::new(0),
@@ -860,6 +859,76 @@ impl Command {
     {
         self.inner.envs(vars);
         self
+    }
+
+    /// Gets an iterator of the arguments that will be passed to the program.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::ffi::OsStr;
+    /// use async_process::Command;
+    ///
+    /// let mut cmd = Command::new("echo");
+    /// cmd.arg("first").arg("second");
+    /// let args: Vec<&OsStr> = cmd.get_args().collect();
+    /// assert_eq!(args, &["first", "second"]);
+    /// ```
+    pub fn get_args(&self) -> std::process::CommandArgs<'_> {
+        self.inner.get_args()
+    }
+
+    /// Gets an iterator of the environment variables explicitly set for the child process.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::ffi::OsStr;
+    /// use async_process::Command;
+    ///
+    /// let mut cmd = Command::new("ls");
+    /// cmd.env("TERM", "dumb").env_remove("TZ");
+    /// let envs: Vec<(&OsStr, Option<&OsStr>)> = cmd.get_envs().collect();
+    /// assert_eq!(envs, &[
+    ///     (OsStr::new("TERM"), Some(OsStr::new("dumb"))),
+    ///     (OsStr::new("TZ"), None)
+    /// ]);
+    /// ```
+    pub fn get_envs(&self) -> std::process::CommandEnvs<'_> {
+        self.inner.get_envs()
+    }
+
+    /// Gets the working directory for the child process.
+    ///
+    /// This returns [`None`] if the working directory will not be changed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::Path;
+    /// use async_process::Command;
+    ///
+    /// let mut cmd = Command::new("ls");
+    /// assert_eq!(cmd.get_current_dir(), None);
+    /// cmd.current_dir("/bin");
+    /// assert_eq!(cmd.get_current_dir(), Some(Path::new("/bin")));
+    /// ```
+    pub fn get_current_dir(&self) -> Option<&Path> {
+        self.inner.get_current_dir()
+    }
+
+    /// Gets the path to the program that was given to [`Command::new`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use async_process::Command;
+    ///
+    /// let cmd = Command::new("echo");
+    /// assert_eq!(cmd.get_program(), "echo");
+    /// ```
+    pub fn get_program(&self) -> &OsStr {
+        self.inner.get_program()
     }
 
     /// Removes an environment variable mapping.
