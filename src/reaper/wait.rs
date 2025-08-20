@@ -223,7 +223,7 @@ cfg_if::cfg_if! {
         pub(crate) fn available() -> bool {
             true
         }
-    } else if #[cfg(any( target_vendor = "apple", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly" ))] {
+    } else if #[cfg(any(target_vendor = "apple", target_os = "freebsd", target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly"))] {
         use async_io::os::kqueue::{Exit, Filter};
         use std::num::NonZeroI32;
 
