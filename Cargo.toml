@@ -40,7 +40,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(async_process_force_signal
 async-executor = "1.5.1"
 
 [target.'cfg(windows)'.dev-dependencies.windows-sys]
-version = "0.60"
+version = "0.61"
 default-features = false
 features = [
     "Win32_Foundation",
