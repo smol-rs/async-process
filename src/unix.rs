@@ -4,7 +4,25 @@ use std::ffi::OsStr;
 use std::io;
 use std::os::unix::process::CommandExt as _;
 
+use cfg_if::cfg_if;
+
 use crate::Command;
+
+cfg_if! {
+    if #[cfg(any(target_os = "vxworks", target_os = "espidf", target_os = "horizon", target_os = "vita"))] {
+        type UserId = u16;
+        type GroupId = u16;
+    } else if #[cfg(target_os = "nto")] {
+        // Both IDs are signed, see `sys/target_nto.h` of the QNX Neutrino SDP.
+        // Only positive values should be used, see e.g.
+        // https://www.qnx.com/developers/docs/7.1/#com.qnx.doc.neutrino.lib_ref/topic/s/setuid.html
+        type UserId = i32;
+        type GroupId = i32;
+    } else {
+        type UserId = u32;
+        type GroupId = u32;
+    }
+}
 
 /// Unix-specific extensions to the [`Command`] builder.
 ///
@@ -14,11 +32,11 @@ pub trait CommandExt: crate::sealed::Sealed {
     /// Sets the child process's user ID. This translates to a
     /// `setuid` call in the child process. Failure in the `setuid`
     /// call will cause the spawn to fail.
-    fn uid(&mut self, id: u32) -> &mut Command;
+    fn uid(&mut self, id: UserId) -> &mut Command;
 
     /// Similar to `uid`, but sets the group ID of the child process. This has
     /// the same semantics as the `uid` field.
-    fn gid(&mut self, id: u32) -> &mut Command;
+    fn gid(&mut self, id: GroupId) -> &mut Command;
 
     /// Performs all the required setup by this `Command`, followed by calling
     /// the `execvp` syscall.
@@ -60,12 +78,12 @@ pub trait CommandExt: crate::sealed::Sealed {
 
 impl crate::sealed::Sealed for Command {}
 impl CommandExt for Command {
-    fn uid(&mut self, id: u32) -> &mut Command {
+    fn uid(&mut self, id: UserId) -> &mut Command {
         self.inner.uid(id);
         self
     }
 
-    fn gid(&mut self, id: u32) -> &mut Command {
+    fn gid(&mut self, id: GroupId) -> &mut Command {
         self.inner.gid(id);
         self
     }
