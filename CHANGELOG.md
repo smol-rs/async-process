@@ -1,3 +1,10 @@
+# Version 2.5.0
+
+- Bump MSRV to 1.71. (#106)
+- Add `Command::get_{args, envs, current_dir, program}` (#102)
+- Update to `windows-sys` v0.61. (#104)
+- Remove dependency on `async_lock` on Windows. (#103)
+
 # Version 2.4.0
 
 - Add a new optional `tracing` feature. When enabled, this feature adds logging
