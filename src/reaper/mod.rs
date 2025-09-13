@@ -12,13 +12,29 @@
 #![allow(irrefutable_let_patterns)]
 
 /// Enable the waiting reaper.
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(
+    windows,
+    target_os = "linux",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "dragonfly",
+    target_vendor = "apple"
+))]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {$($tt)*};
 }
 
 /// Enable the waiting reaper.
-#[cfg(not(any(windows, target_os = "linux")))]
+#[cfg(not(any(
+    windows,
+    target_os = "linux",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "dragonfly",
+    target_vendor = "apple"
+)))]
 macro_rules! cfg_wait {
     ($($tt:tt)*) => {};
 }
@@ -48,7 +64,15 @@ use std::sync::Mutex;
 
 /// The underlying system reaper.
 pub(crate) enum Reaper {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(
+        windows,
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "dragonfly",
+        target_vendor = "apple"
+    ))]
     /// The reaper based on the wait backend.
     Wait(wait::Reaper),
 
@@ -59,7 +83,15 @@ pub(crate) enum Reaper {
 
 /// The wrapper around a child.
 pub(crate) enum ChildGuard {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(
+        windows,
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "dragonfly",
+        target_vendor = "apple"
+    ))]
     /// The child guard based on the wait backend.
     Wait(wait::ChildGuard),
 
@@ -70,7 +102,15 @@ pub(crate) enum ChildGuard {
 
 /// A lock on the reaper.
 pub(crate) enum Lock {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(
+        windows,
+        target_os = "linux",
+        target_os = "freebsd",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "dragonfly",
+        target_vendor = "apple"
+    ))]
     /// The wait-based reaper needs no lock.
     Wait,
 
