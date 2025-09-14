@@ -102,3 +102,21 @@ jobs:
       - name: Install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       - run: cargo hack build --rust-version
+  target-compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false 
+      matrix:
+        rust: [nightly]
+        target:
+          - aarch64-unknown-nto-qnx800
+          - x86_64-pc-nto-qnx800
+    steps: 
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        run: | 
+          rustup update ${{ matrix.rust }} --no-self-update 
+          rustup default ${{ matrix.rust }}
+          rustup component add rust-src --toolchain nightly
+      - name: Cargo check 
+        run: cargo +nightly check -Zbuild-std --target ${{ matrix.target }}
