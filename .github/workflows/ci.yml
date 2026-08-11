@@ -49,7 +49,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         rust: [nightly, beta, stable]
     steps:
-      - uses: actions/checkout@v4
+      - uses: taiki-e/checkout-action@v1
       - name: Install Rust
         # --no-self-update is necessary because the windows environment cannot self-update rustup.exe.
         run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
@@ -75,7 +75,7 @@ jobs:
         target:
           - aarch64-linux-android
     steps:
-      - uses: actions/checkout@v4
+      - uses: taiki-e/checkout-action@v1
       - name: Install Rust
         # --no-self-update is necessary because the windows environment cannot self-update rustup.exe.
         run: rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
@@ -98,25 +98,25 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: taiki-e/checkout-action@v1
       - name: Install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       - run: cargo hack build --rust-version
   target-compatibility:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false 
+      fail-fast: false
       matrix:
         rust: [nightly]
         target:
           - aarch64-unknown-nto-qnx800
           - x86_64-pc-nto-qnx800
-    steps: 
-      - uses: actions/checkout@v4
+    steps:
+      - uses: taiki-e/checkout-action@v1
       - name: Install Rust
-        run: | 
-          rustup update ${{ matrix.rust }} --no-self-update 
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
           rustup default ${{ matrix.rust }}
           rustup component add rust-src --toolchain nightly
-      - name: Cargo check 
+      - name: Cargo check
         run: cargo +nightly check -Zbuild-std --target ${{ matrix.target }}
