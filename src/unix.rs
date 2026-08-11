@@ -12,7 +12,7 @@ cfg_if! {
     if #[cfg(any(target_os = "vxworks", target_os = "espidf", target_os = "horizon", target_os = "vita"))] {
         type UserId = u16;
         type GroupId = u16;
-    } else if #[cfg(target_os = "nto")] {
+    } else if #[cfg(any(target_os = "nto", target_os = "qnx"))] {
         // Both IDs are signed, see `sys/target_nto.h` of the QNX Neutrino SDP.
         // Only positive values should be used, see e.g.
         // https://www.qnx.com/developers/docs/7.1/#com.qnx.doc.neutrino.lib_ref/topic/s/setuid.html
