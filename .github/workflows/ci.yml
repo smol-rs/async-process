@@ -65,6 +65,11 @@ jobs:
         env:
           RUSTFLAGS: ${{ env.RUSTFLAGS }} --cfg async_process_force_signal_backend
         if: matrix.os != 'windows-latest'
+      # TODO: signal-hook-registry and rustix does not yet address https://github.com/rust-lang/rust/pull/158449.
+      # - run: |
+      #     rustup component add rust-src --toolchain nightly
+      #     cargo check -Z build-std --target x86_64-pc-qnx
+      #   if: startsWith(matrix.os, 'ubuntu') && startsWith(matrix.rust, 'nightly')
 
   test-android:
     runs-on: ubuntu-latest
@@ -102,21 +107,3 @@ jobs:
       - name: Install cargo-hack
         uses: taiki-e/install-action@cargo-hack
       - run: cargo hack build --rust-version
-  target-compatibility:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [nightly]
-        target:
-          - aarch64-unknown-nto-qnx800
-          - x86_64-pc-nto-qnx800
-    steps:
-      - uses: taiki-e/checkout-action@v1
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup component add rust-src --toolchain nightly
-      - name: Cargo check
-        run: cargo +nightly check -Zbuild-std --target ${{ matrix.target }}

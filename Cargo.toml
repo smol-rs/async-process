@@ -34,7 +34,10 @@ async-task = "4.7.0"
 blocking = "1.0.0"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(async_process_force_signal_backend)'] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os,values("qnx"))', # 1.98+ https://github.com/rust-lang/rust/pull/129490
+    'cfg(async_process_force_signal_backend)',
+] }
 
 [dev-dependencies]
 async-executor = "1.5.1"
